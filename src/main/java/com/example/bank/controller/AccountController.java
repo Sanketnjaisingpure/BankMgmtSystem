@@ -1,0 +1,62 @@
+package com.example.bank.controller;
+
+import com.example.bank.dto.AccountDTO;
+import com.example.bank.dto.CreateAccountDTO;
+import com.example.bank.dto.TransactionDTO;
+import com.example.bank.dto.TransactionRequestDTO;
+import com.example.bank.service.AccountService;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/api/bank-management-system/account")
+public class AccountController {
+
+    private final AccountService accountService;
+
+    @Autowired
+    public AccountController(AccountService accountService) {
+        this.accountService = accountService;
+    }
+
+    @PostMapping("/create-account")
+    public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody CreateAccountDTO createAccountDTO){
+        return ResponseEntity.ok(accountService.createAccount(createAccountDTO));
+    }
+
+    @GetMapping("/{accountId}")
+    public ResponseEntity<AccountDTO> getAccount(@PathVariable("accountId") UUID accountId){
+        return ResponseEntity.ok(accountService.getAccountDTOById(accountId));
+    }
+
+    @PutMapping("/close-account/{accountNumber}")
+    public ResponseEntity<String> closeAccount(@PathVariable("accountNumber") String accountNumber){
+        accountService.closeAccount(accountNumber);
+        return ResponseEntity.ok("Account closed Successfully");
+    }
+
+    @PutMapping("/activate-account/{accountNumber}")
+    public ResponseEntity<String> activateAccount(@PathVariable("accountNumber") String accountNumber){
+        accountService.activateAccount(accountNumber);
+        return ResponseEntity.ok("Account activated Successfully");
+    }
+
+    @PutMapping("/deposit")
+    public ResponseEntity<TransactionDTO> deposit( @RequestBody TransactionRequestDTO transactionRequestDTO){
+        return ResponseEntity.ok(accountService.deposit(transactionRequestDTO));
+    }
+
+    @PutMapping("/withdraw")
+    public ResponseEntity<TransactionDTO> withdraw(@Valid @RequestBody TransactionRequestDTO transactionRequestDTO){
+        return ResponseEntity.ok(accountService.withDraw(transactionRequestDTO));
+    }
+
+    @PutMapping("/transfer")
+    public ResponseEntity<TransactionDTO> transfer(@Valid @RequestBody TransactionRequestDTO transactionRequestDTO){
+        return ResponseEntity.ok(accountService.transfer(transactionRequestDTO));
+    }
+
+}
