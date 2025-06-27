@@ -108,7 +108,6 @@ public class AccountServiceImpl implements AccountService {
         accountNumber = ifscCodePrefix + accountNumber;
         account.setAccountNumber(accountNumber);
         account.setAccountType(createAccountDTO.getAccountType());
-
         account.setBranch(branch);
         account.setBalance(amount);
         account.setAccountStatus(AccountStatus.ACTIVE);
