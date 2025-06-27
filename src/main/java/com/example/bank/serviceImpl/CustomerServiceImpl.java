@@ -1,6 +1,6 @@
 package com.example.bank.serviceImpl;
 
-import com.example.bank.Enum.AccountType;
+
 import com.example.bank.Enum.CardStatus;
 import com.example.bank.Enum.LoanStatus;
 import com.example.bank.dto.*;
@@ -12,6 +12,7 @@ import com.example.bank.repository.*;
 import com.example.bank.service.AccountService;
 import com.example.bank.service.CustomerService;
 import com.example.bank.utils.IdentityProofTypeValidator;
+import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import org.modelmapper.ModelMapper;
@@ -34,15 +35,18 @@ public class CustomerServiceImpl implements CustomerService {
     private final CardRepository cardRepository;
     private final ModelMapper modelMapper;
     private final IdentityProofTypeValidator identityProofTypeValidator;
+    private final MaskedNumber maskedNumber;
     private static final Logger log = LoggerFactory.getLogger(CustomerServiceImpl.class);
 
 
     @Autowired
     public CustomerServiceImpl(CustomerRepository customerRepository,@Lazy AccountService accountService,
             @Lazy CardRepository cardRepository,
+            MaskedNumber maskedNumber,
             IdentityProofTypeValidator identityProofTypeValidator
             ,ModelMapper modelMapper) {
         this.customerRepository = customerRepository;
+        this.maskedNumber = maskedNumber;
         this.modelMapper = modelMapper;
         this.cardRepository = cardRepository;
         this.identityProofTypeValidator = identityProofTypeValidator;
@@ -91,7 +95,8 @@ public class CustomerServiceImpl implements CustomerService {
             customer.setCreatedAt(LocalDateTime.now());
 
             customerRepository.save(customer);
-            log.info("Customer is created successfully");
+            log.info("Customer {} is created successfully ",
+                    maskedNumber.maskNumber(customer.getCustomerId().toString()));
 
             return modelMapper.map(createCustomerDTO, CustomerDTO.class);
 
@@ -111,13 +116,13 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Customer findCustomerById(UUID customerId){
-        log.info("Initiating find customer by Id");
+        log.info("Initiating find customer by Id {} ", maskedNumber.maskNumber(customerId.toString()));
         Customer customer = customerRepository.findById(customerId).orElseThrow(()-> {
-            log.warn("Customer not found");
+            log.warn("Customer {} not found ", maskedNumber.maskNumber(customerId.toString()));
             return new ResourceNotFoundException("Customer not found");
         }
         );
-        log.info("Customer found successfully");
+        log.info("Customer {} found successfully ", maskedNumber.maskNumber(customer.getCustomerId().toString()));
         return customer;
     }
 
@@ -144,7 +149,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerDTO updateCustomerDetails(UUID customerId, UpdateCustomerDTO updateCustomerDTO) {
 
-        log.info("Initiating Updated Customer Details");
+        log.info("Initiating Updated Customer Details by Id {} ", maskedNumber.maskNumber(customerId.toString()));
 
         Customer customer = this.findCustomerById(customerId);
 
@@ -163,14 +168,14 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setIdentityProofType(updateCustomerDTO.getIdentityProofType());
         customer.setUpdatedAt(LocalDateTime.now());
         customerRepository.save(customer);
-        log.info("Customer updated successfully id : {} ",customer.getCustomerId());
+        log.info("Customer updated successfully id : {} ",maskedNumber.maskNumber(customerId.toString()));
         return modelMapper.map(customer, CustomerDTO.class);
     }
 
     @Transactional
     @Override
     public void deleteCustomer(UUID customerId) {
-        log.info("Initiating delete customer by Id {}" , customerId);
+        log.info("Initiating delete customer by Id {}" , maskedNumber.maskNumber(customerId.toString()));
         Customer customer = this.findCustomerById(customerId);
 
         // here  need to ensure that customer has no account associated with it,
@@ -179,7 +184,6 @@ public class CustomerServiceImpl implements CustomerService {
 
         log.info("Checking if customer has any active loan associated with it");
         customer.getLoanList().forEach(loan -> {
-
             if (loan.getLoanStatus().equals(LoanStatus.ACTIVE)) {
                 log.warn("Customer has active loan associated with it");
                 throw new IllegalArgumentException("Customer has active loan associated with it");
@@ -197,12 +201,12 @@ public class CustomerServiceImpl implements CustomerService {
         }
 
         customerRepository.delete(customer);
-        log.info("Customer deleted successfully ");
+        log.info("Customer {} deleted successfully ", maskedNumber.maskNumber(customerId.toString()));
     }
 
     @Override
     public List<AccountDTO> getCustomerAccounts(UUID customerId) {
-        log.info("Initiating Get All Customer's Account's ");
+        log.info("Initiating Get All Customer's Account's by Customer Id {} ", maskedNumber.maskNumber(customerId.toString()));
         this.findCustomerById(customerId);
         List<Account> accountList = accountService.FindAllCustomerAccountByCustomerId(customerId);
 

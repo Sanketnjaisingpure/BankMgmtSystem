@@ -7,13 +7,12 @@ import com.example.bank.exception.ResourceNotFoundException;
 import com.example.bank.model.Account;
 import com.example.bank.model.Card;
 import com.example.bank.model.Customer;
-import com.example.bank.repository.AccountRepository;
 import com.example.bank.repository.CardRepository;
-import com.example.bank.repository.CustomerRepository;
 import com.example.bank.service.AccountService;
 import com.example.bank.service.CardService;
 import com.example.bank.service.CustomerService;
 import com.example.bank.utils.AccountNumberGenerator;
+import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -38,14 +37,17 @@ public class CardServiceImpl implements CardService {
 
     private final ModelMapper modelMapper;
 
+    private final MaskedNumber maskedNumber;
+
     private final AccountNumberGenerator accountNumberGenerator;
 
     @Autowired
     public CardServiceImpl(CustomerService customerService, CardRepository cardRepository,AccountService accountService,
-                                ModelMapper modelMapper, AccountNumberGenerator accountNumberGenerator){
+                                ModelMapper modelMapper ,MaskedNumber maskedNumber, AccountNumberGenerator accountNumberGenerator){
         this.accountService = accountService;
         this.accountNumberGenerator = accountNumberGenerator;
         this.cardRepository = cardRepository;
+        this.maskedNumber = maskedNumber;
         this.customerService =customerService;
         this.modelMapper = modelMapper;
     }
@@ -63,7 +65,6 @@ public class CardServiceImpl implements CardService {
         card.setCardNumber(cardNumber);
         card.setCardStatus(CardStatus.ACTIVE);
         card.setCardType(createCardDTO.getCardType());
-        log.info("Finding Customer by ID: {}", createCardDTO.getCustomerId());
         Customer customer = customerService.findCustomerById(createCardDTO.getCustomerId());
 
         long count = customer.getCardList().size();
@@ -77,7 +78,8 @@ public class CardServiceImpl implements CardService {
         Account account = accountService.getAccountByAccountNumber(createCardDTO.getAccountNumber());
 
         if(!account.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
-            log.warn("Customer {} don't have account {}", customer.getCustomerId(),account.getAccountNumber());
+            log.warn("Customer {} don't have account {}", maskedNumber.maskNumber( customer.getCustomerId().toString()),
+                    maskedNumber.maskNumber(account.getAccountNumber()));
             throw new IllegalArgumentException("Customer and Account does not match");
         }
         card.setAccount(account);
@@ -89,7 +91,7 @@ public class CardServiceImpl implements CardService {
         String expirationDate = expiration.format(formatter);
         card.setExpirationDate(expirationDate);
         cardRepository.save(card);
-        log.info("Card created successfully");
+        log.info("Card {} created successfully ", maskedNumber.maskNumber(card.getCardNumber().toString()));
         return modelMapper.map(card, CardDTO.class);
     }
 
@@ -100,10 +102,8 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public List<CardDTO> getCardListByCustomer(UUID customerId) {
-        log.info("Finding list of Card used by one customer");
+        log.info("Finding list of Card used by one customer  {} ", maskedNumber.maskNumber(customerId.toString()));
         Customer customer = customerService.findCustomerById(customerId);
-        log.info("Found list of card used by one customer");
-
         List<Card> cardList = customer.getCardList();
         if (cardList.isEmpty()){
             log.warn("Card not found for this customer");
@@ -124,20 +124,21 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public void activateCard(long cardNumber) {
+        log.info("Activating card initialized");
         Card card = this.getCardDetailsByCardNumber(cardNumber);
         card.setCardStatus(CardStatus.ACTIVE);
-        log.info("card activated successfully");
+        log.info("card activated successfully ");
         cardRepository.save(card);
     }
 
     @Override
     public Card getCardDetailsByCardNumber(Long cardNumber) {
         Card card = cardRepository.getCardDetailsByCardNumber(cardNumber);
-        log.info("finding Card Details by Card Number {}" , cardNumber);
+        log.info("finding Card Details by Card Number {}" , maskedNumber.maskNumber( cardNumber.toString()));
         if (card==null){
-            log.warn("Card not found");
+            log.warn("Card {} not found ", maskedNumber.maskNumber(cardNumber.toString()));
             throw new ResourceNotFoundException("Card not found");
-        }log.info("Card found successfully");
+        }log.info("Card {} found successfully ", maskedNumber.maskNumber(cardNumber.toString()));
         return card;
     }
 }

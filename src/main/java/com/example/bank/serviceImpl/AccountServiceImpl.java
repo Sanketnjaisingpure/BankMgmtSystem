@@ -18,6 +18,7 @@ import com.example.bank.service.AccountService;
 import com.example.bank.service.BranchService;
 import com.example.bank.service.CustomerService;
 import com.example.bank.utils.AccountNumberGenerator;
+import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -42,6 +43,8 @@ public class AccountServiceImpl implements AccountService {
 
     private final CustomerService customerService;
 
+    private final MaskedNumber maskedNumber;
+
     private final TransactionRepository transactionRepository;
 
     private static final BigDecimal MINIMUM_AMOUNT = BigDecimal.valueOf(500);
@@ -57,6 +60,7 @@ public class AccountServiceImpl implements AccountService {
     public AccountServiceImpl(AccountRepository accountRepository,
                               BranchService branchService,CustomerService customerService,
                               ModelMapper modelMapper, TransactionRepository transactionRepository,
+                              MaskedNumber maskedNumber ,
                               AccountNumberGenerator accountNumberGenerator) {
         this.accountRepository= accountRepository;
         this.modelMapper = modelMapper;
@@ -64,24 +68,25 @@ public class AccountServiceImpl implements AccountService {
         this.accountNumberGenerator = accountNumberGenerator;
         this.branchService =branchService;
         this.customerService = customerService;
+        this.maskedNumber = maskedNumber;
     }
 
     @Override
     public Account getAccountByAccountNumber(String accountNumber){
-        log.info("finding Account: {}",accountNumber);
+        log.info("finding Account: {}",this.maskedNumber.maskNumber(accountNumber));
         Account account =accountRepository.getAccountByAccountNumber(accountNumber);
         if (account==null){
-            log.warn("Account: {} not found " ,accountNumber);
+            log.warn("Account: {} not found " ,this.maskedNumber.maskNumber(accountNumber));
             throw new ResourceNotFoundException("Account Not found");
         }
 
         log.info("Checking if Account Status is Closed or not");
         if(account.getAccountStatus().equals(AccountStatus.CLOSED)){
-            log.warn("Account: {} Status is Closed  " ,accountNumber);
+            log.warn("Account: {} Status is Closed  " ,this.maskedNumber.maskNumber(accountNumber));
             throw new ResourceNotFoundException("Account Not found");
         }
 
-        log.info("Account: {} found successfully ",accountNumber);
+        log.info("Account: {} found successfully ",this.maskedNumber.maskNumber(accountNumber));
         return account;
     }
 
@@ -123,7 +128,7 @@ public class AccountServiceImpl implements AccountService {
         }
 
         // count number of accounts customer has
-        long count = customer.getAccountList().stream().map(Account::getAccountNumber).count();
+        long count = customer.getAccountList().size();
 
         log.info("Checking if Customer already has 3 accounts");
 
@@ -135,7 +140,7 @@ public class AccountServiceImpl implements AccountService {
         account.setCustomer(customer);
         account.setOpenDate(LocalDate.now());
 
-        log.info("Transaction initiated for creating account: {}", accountNumber);
+        log.info("Transaction initiated for creating account: {}", this.maskedNumber.maskNumber(accountNumber));
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
         transaction.setAmount(amount);
@@ -143,7 +148,7 @@ public class AccountServiceImpl implements AccountService {
         transaction.setDestinationAccountNumber(accountNumber);
         transaction.setTransactionType(TransactionType.DEPOSIT);
         transaction.setTimestamp(Timestamp.valueOf(LocalDateTime.now()));
-        log.info("transaction successful for creating account: {}", accountNumber);
+        log.info("transaction successful for creating account: {}", this.maskedNumber.maskNumber(accountNumber));
         transactionRepository.save(transaction);
         accountRepository.save(account);
 
@@ -155,7 +160,7 @@ public class AccountServiceImpl implements AccountService {
         accountDTO.setBranchName(branch.getBranchName());
         accountDTO.setBankName(branch.getBank().getBankName());
 
-        log.info("Account Created Successfully Account: {}", accountNumber);
+        log.info("Account Created Successfully Account: {}", this.maskedNumber.maskNumber(accountNumber));
         return accountDTO;
     }
 
@@ -178,10 +183,10 @@ public class AccountServiceImpl implements AccountService {
     public Account getAccountById(UUID accountId){
         log.info("Get Account By Id initiated");
         Account account = accountRepository.findById(accountId).orElseThrow(()->{
-            log.warn("Account not found with Id: {}" , accountId);
+            log.warn("Account not found with Id: {}" , this.maskedNumber.maskNumber(accountId.toString()));
             return new ResourceNotFoundException("Account not found");
         });
-        log.info("Account found Successfully with Id: {}" , accountId);
+        log.info("Account found Successfully with Id: {}" , this.maskedNumber.maskNumber(accountId.toString()));
         return account;
     }
 
@@ -189,25 +194,25 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public void closeAccount(String accountNumber) {
 
-        log.info("Closing Account: {} initiated ",accountNumber);
+        log.info("Closing Account: {} initiated ",this.maskedNumber.maskNumber(accountNumber));
         Account account = this.getAccountByAccountNumber(accountNumber);
         account.setAccountStatus(AccountStatus.CLOSED);
-        log.info("Account: {} Closed Successfully ", accountNumber);
+        log.info("Account: {} Closed Successfully ", maskedNumber.maskNumber(accountNumber));
         accountRepository.save(account);
     }
 
     @Override
     public void activateAccount(String accountNumber) {
-        log.info("Activating Account: {} initiated ",accountNumber);
+        log.info("Activating Account: {} initiated ", maskedNumber.maskNumber(accountNumber));
         Account account = this.getAccountByAccountNumber(accountNumber);
 
         if (account.getAccountStatus().equals(AccountStatus.ACTIVE)) {
-            log.warn("Account is already Active or Account: {} " ,accountNumber);
+            log.warn("Account is already Active or Account: {} " , maskedNumber.maskNumber(accountNumber));
             throw new RuntimeException("Account is already Active");
         }
 
         account.setAccountStatus(AccountStatus.ACTIVE);
-        log.info("Account: {} Activated Successfully ", accountNumber);
+        log.info("Account: {} Activated Successfully ",  maskedNumber.maskNumber(accountNumber));
         accountRepository.save(account);
     }
 
@@ -218,10 +223,10 @@ public class AccountServiceImpl implements AccountService {
         String accountNumber = transactionRequestDTO.getToAccountNumber();
         BigDecimal amount = transactionRequestDTO.getAmount();
 
-        log.info("Initiating deposit. Account: {}, Amount: ₹{}", accountNumber, amount);
+        log.info("Initiating deposit. Account: {}, Amount: ₹{}",  maskedNumber.maskNumber(accountNumber), amount);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Invalid deposit amount: ₹{} for account: {}", amount, accountNumber);
+            log.warn("Invalid deposit amount: ₹{} for account: {}", amount,  maskedNumber.maskNumber(accountNumber));
             throw new IllegalArgumentException("Deposit amount must be greater than zero");
         }
 
@@ -234,7 +239,7 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(account);
 
         // Save transaction
-        log.info("Initiating Transaction for deposit for account: {}", accountNumber);
+        log.info("Initiating Transaction for deposit for account: {}",  maskedNumber.maskNumber(accountNumber));
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
         transaction.setAmount(amount);
@@ -242,11 +247,11 @@ public class AccountServiceImpl implements AccountService {
         transaction.setDestinationAccountNumber(accountNumber);
         transaction.setTransactionType(TransactionType.DEPOSIT);
         transaction.setTimestamp(Timestamp.valueOf(LocalDateTime.now()));
-        log.info("Transaction successful for deposit for account: {}", accountNumber);
+        log.info("Transaction successful for deposit for account: {}",  maskedNumber.maskNumber(accountNumber));
         transactionRepository.save(transaction);
 
         log.info("Deposit successful. Account: {}, Amount: ₹{}, New Balance: ₹{}",
-                accountNumber, amount, account.getBalance());
+                maskedNumber.maskNumber(accountNumber), amount, account.getBalance());
 
         return modelMapper.map(transaction, TransactionDTO.class);
     }
@@ -259,10 +264,10 @@ public class AccountServiceImpl implements AccountService {
         String accountNumber = transactionRequestDTO.getToAccountNumber();
         BigDecimal amount = transactionRequestDTO.getAmount();
 
-        log.info("Initiating withdrawal. Account: {}, Amount: ₹{}", accountNumber, amount);
+        log.info("Initiating withdrawal. Account: {}, Amount: ₹{}",  maskedNumber.maskNumber(accountNumber), amount);
 
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            log.warn("Invalid withdrawal amount for account {}: ₹{}", accountNumber, amount);
+            log.warn("Invalid withdrawal amount for account {}: ₹{}",  maskedNumber.maskNumber(accountNumber), amount);
             throw new IllegalArgumentException("Withdrawal amount must be greater than zero");
         }
 
@@ -272,7 +277,7 @@ public class AccountServiceImpl implements AccountService {
 
         if (newBalance.compareTo(MINIMUM_AMOUNT) < 0) {
             log.warn("Withdrawal denied. Post-withdrawal balance ₹{} would fall below ₹500 for account {}",
-                    newBalance, accountNumber);
+                    newBalance, maskedNumber.maskNumber(accountNumber));
             throw new IllegalArgumentException("Withdrawal not allowed: Balance must not fall below ₹500");
         }
 
@@ -280,7 +285,7 @@ public class AccountServiceImpl implements AccountService {
         account.setBalance(newBalance);
         accountRepository.save(account);
 
-        log.info("Initiating Transaction for withdrawal for account: {}", accountNumber);
+        log.info("Initiating Transaction for withdrawal for account: {}",  maskedNumber.maskNumber(accountNumber));
         // Save transaction
         Transaction transaction = new Transaction();
         transaction.setAccount(account);
@@ -289,11 +294,11 @@ public class AccountServiceImpl implements AccountService {
         transaction.setTimestamp(Timestamp.valueOf(LocalDateTime.now()));
         transaction.setDescription("Amount withdrawn");
         transaction.setDestinationAccountNumber(accountNumber);
-        log.info("Transaction successful for withdrawal for account: {}", accountNumber);
+        log.info("Transaction successful for withdrawal for account: {}",  maskedNumber.maskNumber(accountNumber));
         transactionRepository.save(transaction);
 
         log.info("Withdrawal successful. Account: {}, Withdrawn: ₹{}, Remaining balance: ₹{}",
-                accountNumber, amount, newBalance);
+                maskedNumber.maskNumber(accountNumber), amount, newBalance);
 
         return modelMapper.map(transaction, TransactionDTO.class);
     }
@@ -318,7 +323,7 @@ public class AccountServiceImpl implements AccountService {
         BigDecimal postTransferBalance = senderBalance.subtract(transferAmount);
         if (postTransferBalance.compareTo(MINIMUM_AMOUNT) < 0) {
             log.warn("Transfer denied: Post-transfer balance ₹{} would fall below ₹500 for account {}",
-                    postTransferBalance, senderAccount.getAccountNumber());
+                    postTransferBalance,  maskedNumber.maskNumber(senderAccount.getAccountNumber()));
             throw new IllegalArgumentException("Transfer denied: Sender's balance must not fall below ₹500");
         }
 
@@ -330,7 +335,7 @@ public class AccountServiceImpl implements AccountService {
 
         accountRepository.save(receiverAccount);
 
-        log.info("Initiating Transaction for ");
+        log.info("Initiating Transaction");
         // Save transaction
         Transaction transaction = new Transaction();
         transaction.setAccount(senderAccount);
@@ -343,8 +348,8 @@ public class AccountServiceImpl implements AccountService {
         transactionRepository.save(transaction);
 
         log.info("Transfer successful. Sender: {}, Receiver: {}, Amount: ₹{}, Remaining Balance: ₹{}",
-                senderAccount.getAccountNumber(),
-                receiverAccount.getAccountNumber(),
+                maskedNumber.maskNumber( senderAccount.getAccountNumber()),
+                 maskedNumber.maskNumber(receiverAccount.getAccountNumber()),
                 transferAmount,
                 postTransferBalance);
 
@@ -353,10 +358,10 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public List<Account> FindAllCustomerAccountByCustomerId(UUID customerId){
-        log.info("Initiating Get All Customer's Account's ");
+        log.info("Initiating Get All Customer's Account's  with customer ID: {}", maskedNumber.maskNumber(customerId.toString()));
         List<Account> accountList = accountRepository.FindAllCustomerAccountByCustomerId(customerId);
         if (accountList.isEmpty()) {
-            log.warn("Customer's Account not found");
+            log.warn("Customer's Account not found with ID: {}", maskedNumber.maskNumber(customerId.toString()));
             throw new ResourceNotFoundException("Customer's Account not found");
         }
         log.info("Found all Customer's Account list");

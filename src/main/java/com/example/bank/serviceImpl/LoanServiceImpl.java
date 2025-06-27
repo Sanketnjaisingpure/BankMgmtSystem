@@ -13,6 +13,7 @@ import com.example.bank.service.AccountService;
 import com.example.bank.service.CustomerService;
 import com.example.bank.service.EmployeeService;
 import com.example.bank.service.LoanService;
+import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -24,7 +25,6 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -37,13 +37,15 @@ public class LoanServiceImpl implements LoanService {
     private final CustomerService customerService;
     private final AccountService accountService;
     private final ModelMapper modelMapper ;
+    private final MaskedNumber maskedNumber;
     private static final Logger log = LoggerFactory.getLogger(LoanServiceImpl.class);
 
     @Autowired
     public LoanServiceImpl(LoanRepository loanRepository , AccountService accountService, TransactionRepository transactionRepository
-            , @Lazy EmployeeService employeeService, ModelMapper modelMapper, CustomerService customerService){
+            , @Lazy EmployeeService employeeService,MaskedNumber maskedNumber , ModelMapper modelMapper, CustomerService customerService){
         this.transactionRepository = transactionRepository;
         this.loanRepository = loanRepository;
+        this.maskedNumber = maskedNumber;
         this.employeeService =employeeService;
         this.accountService = accountService;
         this.modelMapper = modelMapper;
@@ -74,7 +76,7 @@ public class LoanServiceImpl implements LoanService {
 
         int loanCount = customer.getLoanList().size();
         if (loanCount >= 3){
-            log.warn("Customer has reached the maximum number of loans. Customer ID: {}", loanApplicationDTO.getCustomerId());
+            log.warn("Customer has reached the maximum number of loans. Customer ID: {}", maskedNumber.maskNumber(loanApplicationDTO.getCustomerId().toString()));
             throw new IllegalArgumentException("Customer has reached the maximum number of loans");
         }
 
@@ -87,14 +89,14 @@ public class LoanServiceImpl implements LoanService {
         if(!account.getCustomer().getCustomerId().equals(loanApplicationDTO.getCustomerId())){
 
             log.warn("Account does not belong to the customer. Customer ID: {}, Account Number: {}",
-                    loanApplicationDTO.getCustomerId(), loanApplicationDTO.getAccountNumber());
+                    maskedNumber.maskNumber(loanApplicationDTO.getCustomerId().toString()), maskedNumber.maskNumber(loanApplicationDTO.getAccountNumber()));
 
             throw new IllegalArgumentException("Account does not belong to the customer");
         }
 
         if (!employee.getBranch().getBranchId().equals(account.getBranch().getBranchId())){
             log.warn("Employee does not belong to the same branch as the account. Employee ID: {}, Account Number: {}",
-                    loanApplicationDTO.getEmployeeId(), loanApplicationDTO.getAccountNumber());
+                  loanApplicationDTO.getEmployeeId(),maskedNumber.maskNumber(loanApplicationDTO.getAccountNumber()));
 
             throw new IllegalArgumentException("Employee does not belong to the same branch as the account");
         }
@@ -112,7 +114,9 @@ public class LoanServiceImpl implements LoanService {
         loan.setTotalAmount(totalAmountWithInterest);
 
         loanRepository.save(loan);
-        log.info("Loan application recorded. Customer ID: {}, Account: {}, Amount: {}", loanApplicationDTO.getCustomerId(), loanApplicationDTO.getAccountNumber(), totalAmountWithInterest);
+        log.info("Loan application recorded. Customer ID: {}, Account: {}, Amount: {}",
+               maskedNumber.maskNumber( loanApplicationDTO.getCustomerId().toString()), maskedNumber.maskNumber( loanApplicationDTO.getAccountNumber())
+                , totalAmountWithInterest);
 
         return modelMapper.map(loan, LoanDTO.class);
     }
@@ -120,23 +124,23 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     public LoanDTO getLoanById(UUID loanId) {
-        log.info("Initializing get loan by ID: {}", loanId);
+        log.info("Initializing get loan by ID: {}", maskedNumber.maskNumber(loanId.toString()));
         Loan loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan not found"));
-        log.info("Loan found successfully");
+        log.info("Loan found successfully with ID: {}", maskedNumber.maskNumber(loanId.toString()));
         return modelMapper.map(loan,LoanDTO.class);
     }
 
     @Override
     public Loan findLoanByLoanId(UUID loanId) {
-        log.info("Initializing get by loan  ID: {}", loanId);
+        log.info("Initializing get by loan  ID: {}", maskedNumber.maskNumber(loanId.toString()));
         return loanRepository.findById(loanId).orElseThrow(() -> new ResourceNotFoundException("loan not found "));
     }
 
 
     @Override
     public List<LoanDTO> getLoanCustomerById(UUID customerId) {
-        log.info("Initializing get loan by customer ID: {}", customerId);
+        log.info("Initializing get loan by customer ID: {}", maskedNumber.maskNumber(customerId.toString()));
         Customer customer = customerService.findCustomerById(customerId);
         log.info("Loan found successfully ");
         return customer.getLoanList().stream().map(loan -> modelMapper.map(loan,LoanDTO.class)).collect(Collectors.toList());
@@ -145,7 +149,7 @@ public class LoanServiceImpl implements LoanService {
     @Transactional
     @Override
     public LoanInstallmentDTO makeLoanPayment(LoanApplyDTO loanApplyDTO) {
-        log.info("Loan payment initiated. Loan ID: {}, Amount: {}", loanApplyDTO.getLoanId(), loanApplyDTO.getTotalAmount());
+        log.info("Loan payment initiated. Loan ID: {}, Amount: {}", maskedNumber.maskNumber( loanApplyDTO.getLoanId().toString()), loanApplyDTO.getTotalAmount());
 
         if (loanApplyDTO.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be greater than zero");
@@ -167,7 +171,7 @@ public class LoanServiceImpl implements LoanService {
         }
 
         // Save transaction
-        log.info("Saving loan payment transaction. Loan ID: {}, Amount: {}", loanApplyDTO.getLoanId(), loanApplyDTO.getTotalAmount());
+        log.info("Saving loan payment transaction. Loan ID: {}, Amount: {}", maskedNumber.maskNumber( loanApplyDTO.getLoanId().toString()), loanApplyDTO.getTotalAmount());
         Transaction transaction = new Transaction();
         transaction.setAmount(loanApplyDTO.getTotalAmount());
         transaction.setDescription("Loan payment");
@@ -182,7 +186,7 @@ public class LoanServiceImpl implements LoanService {
         loan.setLoanStatus(newPaidAmount.compareTo(totalAmount) == 0 ? LoanStatus.PAID_OFF : LoanStatus.ACTIVE);
         loanRepository.save(loan);
 
-        log.info("Loan payment recorded. Loan ID: {}, Remaining Amount: {}", loanApplyDTO.getLoanId(), totalAmount.subtract(newPaidAmount));
+        log.info("Loan payment recorded. Loan ID: {}, Remaining Amount: {}", maskedNumber.maskNumber( loanApplyDTO.getLoanId().toString()), totalAmount.subtract(newPaidAmount));
         return modelMapper.map(loan, LoanInstallmentDTO.class);
     }
 }

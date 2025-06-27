@@ -11,6 +11,7 @@ import com.example.bank.repository.*;
 import com.example.bank.service.BranchService;
 import com.example.bank.service.EmployeeService;
 import com.example.bank.service.LoanService;
+import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -20,7 +21,6 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class EmployeeServiceImpl implements EmployeeService {
@@ -31,14 +31,17 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final LoanService loanService;
     private final BranchService branchService;
     private final LoanRepository loanRepository;
+    private final MaskedNumber maskedNumber;
     private static final Logger log = LoggerFactory.getLogger(EmployeeServiceImpl.class);
 
     @Autowired
     public EmployeeServiceImpl(LoanRepository loanRepository , EmployeeRepository employeeRepository,
                                 @Lazy BranchService branchService,
+                                MaskedNumber maskedNumber,
                                 @Lazy LoanService loanService, ModelMapper modelMapper){
         this.employeeRepository =employeeRepository;
         this.modelMapper = modelMapper;
+        this.maskedNumber = maskedNumber;
         this.loanRepository = loanRepository;
         this.branchService = branchService;
         this.loanService = loanService;
@@ -46,9 +49,11 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public Employee getEmployeeById(Long employeeId) {
-        log.info("Fetching employee with id: {}", employeeId);
-        return employeeRepository.findById(employeeId)
+        log.info("Fetching employee with id: {}", maskedNumber.maskNumber(employeeId.toString()));
+        Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + employeeId));
+        log.info("Employee found: {} successfully", maskedNumber.maskNumber(employeeId.toString()));
+        return employee;
     }
 
 
@@ -69,7 +74,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         employeeDTO.setBankName(branch.getBank().getBankName());
         AddressDTO addressDTO = modelMapper.map(employee.getAddress(), AddressDTO.class);
         employeeDTO.setAddressDTO(addressDTO);
-        log.info("Employee added successfully");
+        log.info("Employee added successfully with id: {}", maskedNumber.maskNumber(employee.getEmployeeId().toString()));
         return employeeDTO;
     }
 
@@ -108,11 +113,11 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public LoanDTO approveLoan(LoanRequestDTO loanRequestDTO) {
 
-        log.info("Approving loan with id: {}", loanRequestDTO.getLoanId());
+        log.info("Approving loan with id: {}",  maskedNumber.maskNumber(loanRequestDTO.getLoanId().toString()));
         Loan loan = loanService.findLoanByLoanId(loanRequestDTO.getLoanId());
 
         if(loan.getLoanStatus().equals(LoanStatus.REJECT)){
-            log.warn("Loan with id {} has already been rejected", loanRequestDTO.getLoanId());
+            log.warn("Loan with id {} has already been rejected", maskedNumber.maskNumber(loan.getLoanId().toString()));
             throw new IllegalArgumentException("Loan has already been rejected");
         }
 
@@ -139,7 +144,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public LoanDTO rejectLoan(LoanRequestDTO loanRequestDTO) {
 
-        log.info("Rejecting loan with id: {}", loanRequestDTO.getLoanId());
+        log.info("Rejecting loan with id: {}", maskedNumber.maskNumber(loanRequestDTO.getLoanId().toString()));
         Loan loan = loanService.findLoanByLoanId(loanRequestDTO.getLoanId());
 
         Employee employee = this.getEmployeeById(loanRequestDTO.getEmployeeId());
@@ -156,5 +161,4 @@ public class EmployeeServiceImpl implements EmployeeService {
         log.info("Loan rejected successfully");
         return modelMapper.map(loan,LoanDTO.class);
     }
-
 }

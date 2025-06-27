@@ -5,9 +5,9 @@ import com.example.bank.exception.ResourceNotFoundException;
 import com.example.bank.model.*;
 import com.example.bank.repository.BankRepository;
 import com.example.bank.repository.BranchRepository;
-import com.example.bank.repository.CustomerRepository;
 import com.example.bank.service.BranchService;
 import com.example.bank.utils.IFSCUtil;
+import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -27,14 +27,16 @@ public class BranchServiceImpl implements BranchService {
     private final ModelMapper modelMapper;
     private final BankRepository bankRepository;
     private final IFSCUtil ifscUtil;
+    private final MaskedNumber maskedNumber;
 
     private static final Logger log = LoggerFactory.getLogger(BranchServiceImpl.class);
 
     @Autowired
     public BranchServiceImpl(BranchRepository branchRepository, ModelMapper modelMapper, BankRepository bankRepository,
-                            IFSCUtil ifscUtil){
+                            IFSCUtil ifscUtil , MaskedNumber maskedNumber) {
         this.branchRepository = branchRepository;
         this.ifscUtil = ifscUtil;
+        this.maskedNumber = maskedNumber;
         this.modelMapper = modelMapper;
         this.bankRepository = bankRepository;
     }
@@ -78,7 +80,7 @@ public class BranchServiceImpl implements BranchService {
         Branch branch = new Branch();
         branch.setBranchName(createBranchDTO.getBranchName());
         Bank bank = bankRepository.findById(createBranchDTO.getBankId()).orElseThrow(()->
-                new ResourceNotFoundException("Bank not found with Id "+ createBranchDTO.getBankId()));
+                new ResourceNotFoundException("Bank not found with Id " +  maskedNumber.maskNumber( createBranchDTO.getBankId().toString())));
 
         branch.setBank(bank);
         String bankName = bank.getBankName();
@@ -105,10 +107,8 @@ public class BranchServiceImpl implements BranchService {
         Branch branch = this.findBranchByBranchId(branchId);
         BranchDTO branchDTO = modelMapper.map(branch,BranchDTO.class);
         AddressDTO addressDTO = modelMapper.map(branch.getAddress(),AddressDTO.class);
-        System.out.println("Address is " +  addressDTO);
         branchDTO.setAddressDTO(addressDTO);
         Bank bank = branch.getBank();
-        System.out.println("Bank is " +  bank);
         branchDTO.setBankSummaryDTO(modelMapper.map(bank,BankSummaryDTO.class));
         log.info("Branch found successfully ");
         return branchDTO;
@@ -116,10 +116,10 @@ public class BranchServiceImpl implements BranchService {
 
     @Override
     public List<BranchDTO> getAllBranchByBank(UUID bankId) {
-        log.info("Getting Branch by Bank Id: {} ",bankId);
+        log.info("Getting Branch by Bank Id: {} ",maskedNumber.maskNumber(bankId.toString()));
         Bank bank = bankRepository.findById(bankId).orElseThrow(()-> new ResourceNotFoundException("Bank not found"));
         if (bank==null){
-            log.warn("Bank not found");
+            log.warn("Bank not found with Id: {}", maskedNumber.maskNumber(bankId.toString()));
             throw new ResourceNotFoundException("Bank not found");
         }
 
