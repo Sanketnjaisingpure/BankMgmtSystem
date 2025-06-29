@@ -1,0 +1,23 @@
+version: '3.8'
+services:
+  db:
+    image: postgres
+    container_name: pg-container
+    environment:
+      POSTGRES_USER: postgres          # ✅ correct key
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: BankMgmtSystem
+    ports:
+      - "5432:5432"
+
+  springboot:
+    build: .
+    container_name: springboot-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/BankMgmtSystem
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root

@@ -104,7 +104,6 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public CustomerDTO getCustomerDTOById(UUID customerId) {
-         log.info("Initiating find customer  by Id");
          Customer customer =  this.findCustomerById(customerId);
          AddressDTO addressDTO = modelMapper.map(customer.getAddress(),AddressDTO.class);
 

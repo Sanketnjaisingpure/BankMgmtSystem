@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -51,7 +50,6 @@ public class CardServiceImpl implements CardService {
         this.customerService =customerService;
         this.modelMapper = modelMapper;
     }
-
     private static final Logger log = LoggerFactory.getLogger(CardServiceImpl.class);
 
 

@@ -11,7 +11,7 @@ public class MaskedNumber {
         }
         int length = number.length();
         // Mask all but the last 4 digits
-        return "*".repeat(length - 4) +
-                number.substring(length - 4);
+        return "*".repeat(length - 10) +
+                number.substring(length - 10);
     }
 }
