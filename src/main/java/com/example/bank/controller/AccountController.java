@@ -23,7 +23,7 @@ public class AccountController {
     }
 
     @PostMapping("/create-account")
-    public ResponseEntity<AccountDTO> createAccount(@Valid @RequestBody CreateAccountDTO createAccountDTO){
+    public ResponseEntity<AccountDTO> createAccount( @Valid @RequestBody CreateAccountDTO createAccountDTO){
         return ResponseEntity.ok(accountService.createAccount(createAccountDTO));
     }
 

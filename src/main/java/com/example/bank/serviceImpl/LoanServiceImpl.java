@@ -22,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -60,16 +61,45 @@ public class LoanServiceImpl implements LoanService {
         if (loanApplicationDTO.getTotalAmount() == null || loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Loan amount must be greater than 0");
         }
-        if (loanApplicationDTO.getInterestRate() <= 0) {
-            throw new IllegalArgumentException("Interest rate must be positive");
-        }
-        if (loanApplicationDTO.getTermInMonth() <= 0) {
-            throw new IllegalArgumentException("Loan term must be greater than 0 months");
-        }
 
         Loan loan = new Loan();
+
+        double interestRate = 0;
+        int termInMonth = 0;
+
+        if (loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(50000)) < 0) {
+            interestRate = 8;
+            termInMonth = 12;
+        }
+        // if amount is between 50,000 and 1,00,000
+        else if (loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(50000)) >= 0 &&
+                 loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(100000)) < 0) {
+            interestRate = 10;
+            termInMonth = 24;
+        }
+        // if amount is between 1,00,000 and 2,00,000
+        else if (loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(100000)) >= 0 &&
+                 loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(200000)) < 0) {
+           interestRate = 12;
+            termInMonth = 36;
+        }
+        // if amount is between 2,00,000 and 5,00,000
+        else if (loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(200000)) >= 0 &&
+                 loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(500000)) < 0) {
+           interestRate = 14;
+            termInMonth = 48;
+        }
+        // if amount is greater than 5,00,000
+        else if (loanApplicationDTO.getTotalAmount().compareTo(BigDecimal.valueOf(500000)) >= 0) {
+            interestRate = 16;
+            termInMonth = 60;
+        }
+
         loan.setLoanStatus(LoanStatus.PENDING);
         loan.setLoanType(loanApplicationDTO.getLoanType());
+
+        loan.setTermInMonth(termInMonth);
+        loan.setInterestRate(interestRate);
 
         Customer customer = customerService.findCustomerById(loanApplicationDTO.getCustomerId());
         loan.setCustomer(customer);
@@ -104,13 +134,10 @@ public class LoanServiceImpl implements LoanService {
         loan.setAccount(account);
 
         loan.setAmountPaid(BigDecimal.ZERO);
-        loan.setInterestRate(loanApplicationDTO.getInterestRate());
-        loan.setTermInMonth(loanApplicationDTO.getTermInMonth());
-
         // Fix interest calculation
-        BigDecimal interestRate = BigDecimal.valueOf(loanApplicationDTO.getInterestRate()).divide(BigDecimal.valueOf(100));
+        BigDecimal interestRateN = BigDecimal.valueOf(interestRate).divide(BigDecimal.valueOf(100));
         BigDecimal totalAmountWithInterest = loanApplicationDTO.getTotalAmount().add(
-                loanApplicationDTO.getTotalAmount().multiply(interestRate));
+                loanApplicationDTO.getTotalAmount().multiply(interestRateN));
         loan.setTotalAmount(totalAmountWithInterest);
 
         loanRepository.save(loan);
@@ -163,12 +190,25 @@ public class LoanServiceImpl implements LoanService {
             throw new IllegalStateException("Loan already paid off");
         }
 
+        BigDecimal needToPayPerMonth = loan.getTotalAmount()
+                .divide(BigDecimal.valueOf(loan.getTermInMonth()), 2, RoundingMode.HALF_UP);
+
+        if (loanApplyDTO.getTotalAmount().compareTo(needToPayPerMonth) != 0) {
+            log.info("Invalid monthly payment. Expected: {}, Provided: {}",
+                    needToPayPerMonth, loanApplyDTO.getTotalAmount());
+            throw new IllegalArgumentException("Monthly payment must be exactly ₹" + needToPayPerMonth);
+        }
+
+
+
+
         BigDecimal totalAmount = loan.getTotalAmount();
         BigDecimal newPaidAmount = loan.getAmountPaid().add(loanApplyDTO.getTotalAmount());
 
         if (newPaidAmount.compareTo(totalAmount) > 0) {
             throw new IllegalArgumentException("Payment exceeds the remaining loan amount");
         }
+
 
         // Save transaction
         log.info("Saving loan payment transaction. Loan ID: {}, Amount: {}", maskedNumber.maskNumber( loanApplyDTO.getLoanId().toString()), loanApplyDTO.getTotalAmount());

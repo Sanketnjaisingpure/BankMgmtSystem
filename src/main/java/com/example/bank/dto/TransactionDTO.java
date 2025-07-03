@@ -25,6 +25,6 @@ public class TransactionDTO {
 
     private String description;
 
-    private Long destinationAccountNumber;
+    private String destinationAccountNumber;
 
 }

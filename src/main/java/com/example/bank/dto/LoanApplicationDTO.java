@@ -37,11 +37,6 @@ public class LoanApplicationDTO {
     @DecimalMin(value = "0.01", message = "Total amount must be greater than 0.01")
     private BigDecimal totalAmount;
 
-    @NotNull
-    private double interestRate;
-
-    @NotNull
-    private int termInMonth;
 
     @NotNull
     private long employeeId;

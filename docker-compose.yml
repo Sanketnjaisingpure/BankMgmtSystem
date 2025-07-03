@@ -3,6 +3,8 @@ services:
   db:
     image: postgres
     container_name: pg-container
+    volumes:
+      -
     environment:
       POSTGRES_USER: postgres          # ✅ correct key
       POSTGRES_PASSWORD: root
