@@ -6,6 +6,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class IdentityProofTypeValidator {
 
+
+    public boolean nameValidate(String name) {
+        // Check if the name is not null and contains only letters and spaces
+        return name != null && name.matches("[a-zA-Z ]+");
+    }
+
     public boolean isValid(IdentityProofType identityProofType, String identityProofId) {
         switch (identityProofType) {
             case AADHAAR_CARD:

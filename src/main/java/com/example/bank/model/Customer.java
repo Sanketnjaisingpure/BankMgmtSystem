@@ -33,8 +33,11 @@ public class Customer {
 
     private String lastName;
 
+    @Column(unique = true)
     @Email
     private String email;
+
+    private String password;
 
     private String phoneNumber;
 

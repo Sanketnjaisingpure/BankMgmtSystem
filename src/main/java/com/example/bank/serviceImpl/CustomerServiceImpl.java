@@ -8,6 +8,7 @@ import com.example.bank.exception.ResourceNotFoundException;
 import com.example.bank.model.Account;
 import com.example.bank.model.Address;
 import com.example.bank.model.Customer;
+import com.example.bank.model.Users;
 import com.example.bank.repository.*;
 import com.example.bank.service.AccountService;
 import com.example.bank.service.CustomerService;
@@ -34,6 +35,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final AccountService accountService;
     private final CardRepository cardRepository;
     private final ModelMapper modelMapper;
+    private final UserDetailsRepo userDetailsRepo;
     private final IdentityProofTypeValidator identityProofTypeValidator;
     private final MaskedNumber maskedNumber;
     private static final Logger log = LoggerFactory.getLogger(CustomerServiceImpl.class);
@@ -42,9 +44,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Autowired
     public CustomerServiceImpl(CustomerRepository customerRepository,@Lazy AccountService accountService,
             @Lazy CardRepository cardRepository,
+            UserDetailsRepo userDetailsRepo,
             MaskedNumber maskedNumber,
             IdentityProofTypeValidator identityProofTypeValidator
             ,ModelMapper modelMapper) {
+        this.userDetailsRepo = userDetailsRepo;
         this.customerRepository = customerRepository;
         this.maskedNumber = maskedNumber;
         this.modelMapper = modelMapper;
@@ -64,6 +68,14 @@ public class CustomerServiceImpl implements CustomerService {
                 throw new RuntimeException("Date of Birth cannot be in future");
             }
 
+
+            if(!identityProofTypeValidator.nameValidate(createCustomerDTO.getFirstName()) ||
+                    !identityProofTypeValidator.nameValidate(createCustomerDTO.getMiddleName()) ||
+                    !identityProofTypeValidator.nameValidate(createCustomerDTO.getLastName())) {
+                log.warn("Invalid name format");
+                throw new RuntimeException("Invalid name format");
+            }
+
             // validate identity proof type and id
             boolean isValidIdentityProof = identityProofTypeValidator.isValid(createCustomerDTO.getIdentityProofType(), createCustomerDTO.getIdentityProofId());
 
@@ -72,7 +84,7 @@ public class CustomerServiceImpl implements CustomerService {
                 throw new RuntimeException("Invalid identity proof type or id");
             }
 
-            if(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofType(createCustomerDTO.getEmail(), createCustomerDTO.getPhoneNumber(),
+            if(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(createCustomerDTO.getEmail(), createCustomerDTO.getPhoneNumber(),
                     createCustomerDTO.getIdentityProofType() , createCustomerDTO.getIdentityProofId())) {
                 log.warn("Customer already exists ");
                 throw new RuntimeException("Customer already exists with the same email, phone number and identity proof type");
@@ -89,14 +101,33 @@ public class CustomerServiceImpl implements CustomerService {
             customer.setPhoneNumber(createCustomerDTO.getPhoneNumber());
             customer.setAddress(modelMapper.map(createCustomerDTO.getAddressDTO(),Address.class));
             customer.setDateOfBirth(createCustomerDTO.getDateOfBirth());
+            customer.setPassword(createCustomerDTO.getPassword());
             if (customer.getAddress() != null) {
                 customer.getAddress().setCustomer(customer);
             }
             customer.setCreatedAt(LocalDateTime.now());
 
+
             customerRepository.save(customer);
+
+            if (userDetailsRepo.findByUsername(createCustomerDTO.getEmail()) != null) {
+                log.warn("User with email {} already exists", createCustomerDTO.getEmail());
+                throw new RuntimeException("User with this email already exists");
+            }
+
+            Users  users = new Users();
+
+            users.setUsername(createCustomerDTO.getEmail());
+            users.setPassword(createCustomerDTO.getPassword());
+            users.setRole("ROLE_CUSTOMER");
+            users.setLinkedEntityId(customer.getCustomerId().toString());
+            users.setEntityType("CUSTOMER");
+
+            userDetailsRepo.save(users);
             log.info("Customer {} is created successfully ",
                     maskedNumber.maskNumber(customer.getCustomerId().toString()));
+
+
 
             return modelMapper.map(createCustomerDTO, CustomerDTO.class);
 

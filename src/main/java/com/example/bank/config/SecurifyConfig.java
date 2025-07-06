@@ -1,18 +1,17 @@
 package com.example.bank.config;
 
-
+import com.example.bank.service.MyUserDetailsService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -26,83 +25,49 @@ public class SecurifyConfig {
     // You can extend WebSecurity Configure Adapter to override methods like configure(http http)
     // to set up your security policies.
 
+    private final MyUserDetailsService myUserDetailsService;
+
+    @Autowired
+    public SecurifyConfig(MyUserDetailsService myUserDetailsService) {
+        this.myUserDetailsService = myUserDetailsService;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        // Open access to register customers
+                        .requestMatchers(HttpMethod.POST, "/api/bank-management-system/customer/create-customer").permitAll()
 
-        // CSRF (Cross-Site Request Forgery)
-        // it is mostly used for put post requests https://chatgpt.com/share/686355d3-77d4-8000-8d89-687e2e2e6c81
-        http.csrf(customizer->customizer.disable());
-        // what is below line doing?
-        // It disables the default security configuration for the application.
-        // This means that the application will not have any default security settings applied,
-        // allowing you to define your own security rules and configurations.
-        // It is useful when you want to have complete control over the security configuration
-        // and do not want to rely on the default settings provided by Spring Security.
-        // It is important to note that disabling the default security configuration can expose your application to security
-        // vulnerabilities if you do not implement your own security measures.
-        http.authorizeHttpRequests(request->request.anyRequest().authenticated());
-        // This line configures the application to require authentication for all HTTP requests.
-        // It means that any request made to the application must be authenticated before it can be processed.
-//        http.formLogin(Customizer.withDefaults());
-        // This line enables form-based login for the application.
-        // It allows users to log in using a form, typically with a username and password.
-        // The Customizer.withDefaults() method provides default configurations for the form login,
-        // such as the login page URL and the default success and failure URLs.
-        // This means that the application will use the default login page provided by Spring Security,
-        // and it will handle the login process automatically without requiring additional configuration.
-        http.httpBasic(Customizer.withDefaults());
-        // This line enables HTTP Basic authentication for the application.
-        // HTTP Basic authentication is a simple authentication scheme that uses a username and password
-        // to authenticate users. When a user tries to access a protected resource,
-        // the application will prompt for a username and password in the HTTP request headers.
+                        // Only ADMIN can create employees
+                        .requestMatchers(HttpMethod.POST, "/api/employees").hasRole("ROLE_ADMIN")
 
-        http.sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        // This line configures the session management for the application.
-        // It sets the session creation policy to stateless, meaning that the application will not create
-        // or maintain any session state on the server side. Each request will be treated as an independent request,
-        // and no session information will be stored on the server. This is useful for applications that do not require session management,
-        // such as RESTful APIs, where each request is self-contained and does not rely on session state.
+                        // Only ADMIN can view all users or manage system
+                        .requestMatchers("/api/admin/**").hasRole("ROLE_ADMIN")
 
+                        // EMPLOYEE endpoints
+                        .requestMatchers("/api/employee/**").hasRole("ROLE_EMPLOYEE")
+
+                        // CUSTOMER endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/bank-management-system/customer/update-customer").hasRole("ROLE_CUSTOMER")
+
+                        // Any other endpoint must be authenticated
+                        .anyRequest().authenticated()
+                )
+                .formLogin(Customizer.withDefaults())
+                .httpBasic(Customizer.withDefaults())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
-
     }
-
-
-    // UserDetailsService Bean
-    // we have controller, service, repository layers ,but when user send a request to the application,
-    // request goes to the controller, then service, then repository, to db, and to verity  user credentials
-    // we need to use UserDetailsService to load user details for authentication
-    /*@Bean
-    public UserDetailsService userDetailsService(){
-
-        UserDetails user1 = User.
-                withDefaultPasswordEncoder()// don't use it , it is deprecated this method is used to create a user with a default password encoder
-                .username("sanket")
-                .password("s@123")
-                .roles("USER") // roles are used to define the authority of the user
-                .build();
-
-        UserDetails user2 = User.
-                withDefaultPasswordEncoder()
-                .username("admin")
-                .password("admin@123")
-                .roles("ADMIN") // roles are used to define the authority of the user
-                .build()
-
-        return new InMemoryUserDetailsManager(user1, user2);
-        but this is returning hard coded users
-    }*/
-
-    // when we pass username and password in the request to the server, It is basically Un-authenticated object
-    // It goes to authenticated provider, which is responsible for authenticating the user
-    // then make it as authenticated object
 
     @Bean
     public AuthenticationProvider authenticationProvider(){
 
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setPasswordEncoder(NoOpPasswordEncoder.getInstance());
+        provider.setUserDetailsService(myUserDetailsService);
+        return provider;
     }
-
 }

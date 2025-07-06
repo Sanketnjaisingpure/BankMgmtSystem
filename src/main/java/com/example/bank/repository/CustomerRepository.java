@@ -13,7 +13,7 @@ public interface CustomerRepository extends JpaRepository<Customer , UUID> {
 
     @Query("select (count(c) > 0) from Customer c where c.email = :email and c.phoneNumber = :phoneNumber" +
             " and c.identityProofType = :identityId  or c.identityProofId = :identityProofId")
-    boolean existsByEmailAndPhoneNumberAndIdentityProofType(@Param("email") String email,@Param("phoneNumber")  String phoneNumber
+    boolean existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(@Param("email") String email,@Param("phoneNumber")  String phoneNumber
             , @Param("identityId") IdentityProofType identityProofType , @Param("identityProofId") String identityProofId);
 
 

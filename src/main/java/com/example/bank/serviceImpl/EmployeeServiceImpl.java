@@ -3,10 +3,7 @@ package com.example.bank.serviceImpl;
 import com.example.bank.Enum.LoanStatus;
 import com.example.bank.dto.*;
 import com.example.bank.exception.ResourceNotFoundException;
-import com.example.bank.model.Address;
-import com.example.bank.model.Branch;
-import com.example.bank.model.Employee;
-import com.example.bank.model.Loan;
+import com.example.bank.model.*;
 import com.example.bank.repository.*;
 import com.example.bank.service.BranchService;
 import com.example.bank.service.EmployeeService;
@@ -29,6 +26,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeRepository employeeRepository;
     private final ModelMapper modelMapper ;
     private final LoanService loanService;
+    private final UserDetailsRepo userDetailsRepo;
     private final BranchService branchService;
     private final LoanRepository loanRepository;
     private final MaskedNumber maskedNumber;
@@ -37,11 +35,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Autowired
     public EmployeeServiceImpl(LoanRepository loanRepository , EmployeeRepository employeeRepository,
                                 @Lazy BranchService branchService,
+                                UserDetailsRepo userDetailsRepo,
                                 MaskedNumber maskedNumber,
                                 @Lazy LoanService loanService, ModelMapper modelMapper){
         this.employeeRepository =employeeRepository;
         this.modelMapper = modelMapper;
         this.maskedNumber = maskedNumber;
+        this.userDetailsRepo = userDetailsRepo;
         this.loanRepository = loanRepository;
         this.branchService = branchService;
         this.loanService = loanService;
@@ -69,6 +69,21 @@ public class EmployeeServiceImpl implements EmployeeService {
         employee.setAddress(modelMapper.map(createEmployeeDTO.getAddressDTO(), Address.class));
         employeeRepository.save(employee);
 
+        Users users = new Users();
+
+        if (userDetailsRepo.findByUsername(createEmployeeDTO.getEmail()) != null) {
+            // If user with the same email already exists, log a warning and throw an exception
+            log.warn("User with email {} already exists", createEmployeeDTO.getEmail());
+            throw new IllegalArgumentException("User with this email already exists");
+        }
+
+        users.setUsername(createEmployeeDTO.getEmail());
+        users.setPassword(createEmployeeDTO.getPassword());
+        users.setRole("ROLE_EMPLOYEE");
+        users.setLinkedEntityId(employee.getEmployeeId().toString());
+        users.setEntityType("EMPLOYEE");
+        userDetailsRepo.save(users);
+
         EmployeeDTO employeeDTO = modelMapper.map(employee, EmployeeDTO.class);
         employeeDTO.setBranchName(branch.getBranchName());
         employeeDTO.setBankName(branch.getBank().getBankName());
@@ -76,6 +91,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         employeeDTO.setAddressDTO(addressDTO);
         log.info("Employee added successfully with id: {}", maskedNumber.maskNumber(employee.getEmployeeId().toString()));
         return employeeDTO;
+
     }
 
     @Override

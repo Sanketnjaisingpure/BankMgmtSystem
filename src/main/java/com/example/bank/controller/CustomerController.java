@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
+    @PreAuthorize("hasRole('ROLE_ADMIN') or hasRole('ROLE_EMPLOYEE')")
     @GetMapping("/{customerId}")
     public ResponseEntity<CustomerDTO> getCustomerDTOById(@PathVariable("customerId") UUID customerId){
         CustomerDTO customerDTO = customerService.getCustomerDTOById(customerId);
@@ -47,6 +49,7 @@ public class CustomerController {
         return ResponseEntity.ok(customerService.createCustomer(createCustomerDTO));
     }
 
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
     @PutMapping("/update-customer/{customerId}")
     public ResponseEntity<CustomerDTO>  updateCustomerDetails( @PathVariable("customerId") UUID customerId, @Valid @RequestBody UpdateCustomerDTO updateCustomerDTO){
         return ResponseEntity.status(HttpStatus.OK).body(customerService.updateCustomerDetails(customerId,updateCustomerDTO));
