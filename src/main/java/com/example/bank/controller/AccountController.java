@@ -8,11 +8,13 @@ import com.example.bank.service.AccountService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/bank-management-system/account")
+@PreAuthorize(" hasRole('ROLE_EMPLOYEE')")
 public class AccountController {
 
     private final AccountService accountService;
@@ -22,11 +24,12 @@ public class AccountController {
         this.accountService = accountService;
     }
 
+
     @PostMapping("/create-account")
     public ResponseEntity<AccountDTO> createAccount( @Valid @RequestBody CreateAccountDTO createAccountDTO){
         return ResponseEntity.ok(accountService.createAccount(createAccountDTO));
     }
-
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
     @GetMapping("/{accountId}")
     public ResponseEntity<AccountDTO> getAccount(@PathVariable("accountId") UUID accountId){
         return ResponseEntity.ok(accountService.getAccountDTOById(accountId));
@@ -44,16 +47,19 @@ public class AccountController {
         return ResponseEntity.ok("Account activated Successfully");
     }
 
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
     @PutMapping("/deposit")
     public ResponseEntity<TransactionDTO> deposit( @RequestBody TransactionRequestDTO transactionRequestDTO){
         return ResponseEntity.ok(accountService.deposit(transactionRequestDTO));
     }
 
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
     @PutMapping("/withdraw")
     public ResponseEntity<TransactionDTO> withdraw(@Valid @RequestBody TransactionRequestDTO transactionRequestDTO){
         return ResponseEntity.ok(accountService.withDraw(transactionRequestDTO));
     }
 
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
     @PutMapping("/transfer")
     public ResponseEntity<TransactionDTO> transfer(@Valid @RequestBody TransactionRequestDTO transactionRequestDTO){
         return ResponseEntity.ok(accountService.transfer(transactionRequestDTO));

@@ -8,6 +8,7 @@ import com.example.bank.service.LoanService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/bank-management-system/loan")
+@PreAuthorize("hasRole('ROLE_EMPLOYEE')")
 public class LoanController {
 
     private final LoanService loanService;
@@ -39,6 +41,7 @@ public class LoanController {
         return ResponseEntity.status(HttpStatus.OK).body(loanService.getLoanById(loanId));
     }
 
+    @PreAuthorize("hasRole('ROLE_CUSTOMER') or hasRole('ROLE_EMPLOYEE')")
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<List<LoanDTO>> getLoanCustomerById(@PathVariable("customerId") UUID customerId) {
         return ResponseEntity.status(HttpStatus.OK).body(loanService.getLoanCustomerById(customerId));

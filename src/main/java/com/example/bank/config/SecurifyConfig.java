@@ -37,20 +37,11 @@ public class SecurifyConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Open access to register customers
-                        .requestMatchers(HttpMethod.POST, "/api/bank-management-system/customer/create-customer").permitAll()
 
-                        // Only ADMIN can create employees
-                        .requestMatchers(HttpMethod.POST, "/api/employees").hasRole("ROLE_ADMIN")
-
-                        // Only ADMIN can view all users or manage system
-                        .requestMatchers("/api/admin/**").hasRole("ROLE_ADMIN")
+                        .requestMatchers("/api/bank-management-system/card/**").hasRole("ROLE_EMPLOYEE")
 
                         // EMPLOYEE endpoints
-                        .requestMatchers("/api/employee/**").hasRole("ROLE_EMPLOYEE")
-
-                        // CUSTOMER endpoints
-                        .requestMatchers(HttpMethod.POST, "/api/bank-management-system/customer/update-customer").hasRole("ROLE_CUSTOMER")
+                        .requestMatchers("/api/bank-management-system/branch/**").hasRole("ROLE_ADMIN")
 
                         // Any other endpoint must be authenticated
                         .anyRequest().authenticated()

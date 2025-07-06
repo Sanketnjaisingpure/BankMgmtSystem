@@ -10,12 +10,14 @@ import com.example.bank.service.EmployeeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/bank-management-system/employee")
+@PreAuthorize("hasRole('ROLE_EMPLOYEE')")
 public class EmployeeController {
 
     private final EmployeeService employeeService;
@@ -40,13 +42,17 @@ public class EmployeeController {
     public ResponseEntity<LoanDTO> rejectLoan(@RequestBody LoanRequestDTO loanRequestDTO) {
         return ResponseEntity.ok(employeeService.rejectLoan(loanRequestDTO));
     }
+
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @PostMapping("/add-employee")
     public ResponseEntity<EmployeeDTO> addEmployee(@Valid @RequestBody CreateEmployeeDTO createEmployeeDTO) {
         return ResponseEntity.ok(employeeService.addEmployee(createEmployeeDTO));
     }
+
     @GetMapping("/get-employee-by-branch/{branchId}")
     public ResponseEntity<List<EmployeeDTO>> getEmployeeByBranch(@PathVariable long branchId) {
         return ResponseEntity.ok(employeeService.getEmployeeByBranch(branchId));
     }
+
 }
 

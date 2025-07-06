@@ -4,7 +4,7 @@ import com.example.bank.Enum.IdentityProofType;
 import org.springframework.stereotype.Component;
 
 @Component
-public class IdentityProofTypeValidator {
+public class IdentityValidator {
 
 
     public boolean nameValidate(String name) {

@@ -12,7 +12,7 @@ import com.example.bank.model.Users;
 import com.example.bank.repository.*;
 import com.example.bank.service.AccountService;
 import com.example.bank.service.CustomerService;
-import com.example.bank.utils.IdentityProofTypeValidator;
+import com.example.bank.utils.IdentityValidator;
 import com.example.bank.utils.MaskedNumber;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
@@ -36,7 +36,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CardRepository cardRepository;
     private final ModelMapper modelMapper;
     private final UserDetailsRepo userDetailsRepo;
-    private final IdentityProofTypeValidator identityProofTypeValidator;
+    private final IdentityValidator identityValidator;
     private final MaskedNumber maskedNumber;
     private static final Logger log = LoggerFactory.getLogger(CustomerServiceImpl.class);
 
@@ -46,14 +46,14 @@ public class CustomerServiceImpl implements CustomerService {
             @Lazy CardRepository cardRepository,
             UserDetailsRepo userDetailsRepo,
             MaskedNumber maskedNumber,
-            IdentityProofTypeValidator identityProofTypeValidator
+            IdentityValidator identityValidator
             ,ModelMapper modelMapper) {
         this.userDetailsRepo = userDetailsRepo;
         this.customerRepository = customerRepository;
         this.maskedNumber = maskedNumber;
         this.modelMapper = modelMapper;
         this.cardRepository = cardRepository;
-        this.identityProofTypeValidator = identityProofTypeValidator;
+        this.identityValidator = identityValidator;
         this.accountService = accountService;
     }
 
@@ -69,15 +69,15 @@ public class CustomerServiceImpl implements CustomerService {
             }
 
 
-            if(!identityProofTypeValidator.nameValidate(createCustomerDTO.getFirstName()) ||
-                    !identityProofTypeValidator.nameValidate(createCustomerDTO.getMiddleName()) ||
-                    !identityProofTypeValidator.nameValidate(createCustomerDTO.getLastName())) {
+            if(!identityValidator.nameValidate(createCustomerDTO.getFirstName()) ||
+                    !identityValidator.nameValidate(createCustomerDTO.getMiddleName()) ||
+                    !identityValidator.nameValidate(createCustomerDTO.getLastName())) {
                 log.warn("Invalid name format");
                 throw new RuntimeException("Invalid name format");
             }
 
             // validate identity proof type and id
-            boolean isValidIdentityProof = identityProofTypeValidator.isValid(createCustomerDTO.getIdentityProofType(), createCustomerDTO.getIdentityProofId());
+            boolean isValidIdentityProof = identityValidator.isValid(createCustomerDTO.getIdentityProofType(), createCustomerDTO.getIdentityProofId());
 
             if (!isValidIdentityProof) {
                 log.warn("Invalid identity proof type or id");
