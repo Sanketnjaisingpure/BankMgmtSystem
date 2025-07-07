@@ -1,12 +1,14 @@
 version: '3.8'
+
 services:
   db:
-    image: postgres
+    image: postgres:13
     container_name: pg-container
+    restart: always
     volumes:
-      -
+      - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: postgres          # ✅ correct key
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
       POSTGRES_DB: BankMgmtSystem
     ports:
@@ -15,6 +17,7 @@ services:
   springboot:
     build: .
     container_name: springboot-app
+    restart: always
     ports:
       - "8080:8080"
     depends_on:
@@ -23,3 +26,20 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/BankMgmtSystem
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: root
+
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    restart: always
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+
+volumes:
+  pgdata:
+  sonarqube_data:
+  sonarqube_extensions:

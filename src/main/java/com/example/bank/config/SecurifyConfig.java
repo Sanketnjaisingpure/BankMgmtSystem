@@ -4,7 +4,6 @@ import com.example.bank.service.MyUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
@@ -38,10 +37,10 @@ public class SecurifyConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/api/bank-management-system/card/**").hasRole("ROLE_EMPLOYEE")
+                        .requestMatchers("/api/bank-management-system/card/**").hasRole("EMPLOYEE")
 
                         // EMPLOYEE endpoints
-                        .requestMatchers("/api/bank-management-system/branch/**").hasRole("ROLE_ADMIN")
+                        .requestMatchers("/api/bank-management-system/branch/**").hasRole("ADMIN")
 
                         // Any other endpoint must be authenticated
                         .anyRequest().authenticated()
