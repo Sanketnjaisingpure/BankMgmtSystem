@@ -41,4 +41,13 @@ public class Address {
     @JsonBackReference
     private Branch branch;
 
+    public Address(Long addressId, String street, String city, String state, String zipCode, String country) {
+        this.addressId = addressId;
+        this.street = street;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+        this.country = country;
+    }
+
 }

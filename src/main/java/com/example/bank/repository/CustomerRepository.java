@@ -16,5 +16,4 @@ public interface CustomerRepository extends JpaRepository<Customer , UUID> {
     boolean existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(@Param("email") String email,@Param("phoneNumber")  String phoneNumber
             , @Param("identityId") IdentityProofType identityProofType , @Param("identityProofId") String identityProofId);
 
-
 }
