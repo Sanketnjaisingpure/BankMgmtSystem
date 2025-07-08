@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -30,15 +31,18 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final BranchService branchService;
     private final LoanRepository loanRepository;
     private final MaskedNumber maskedNumber;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
     private static final Logger log = LoggerFactory.getLogger(EmployeeServiceImpl.class);
 
     @Autowired
     public EmployeeServiceImpl(LoanRepository loanRepository , EmployeeRepository employeeRepository,
                                 @Lazy BranchService branchService,
+                                BCryptPasswordEncoder bCryptPasswordEncoder,
                                 UserDetailsRepo userDetailsRepo,
                                 MaskedNumber maskedNumber,
                                 @Lazy LoanService loanService, ModelMapper modelMapper){
         this.employeeRepository =employeeRepository;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.modelMapper = modelMapper;
         this.maskedNumber = maskedNumber;
         this.userDetailsRepo = userDetailsRepo;
@@ -77,8 +81,8 @@ public class EmployeeServiceImpl implements EmployeeService {
             throw new IllegalArgumentException("User with this email already exists");
         }
 
-        users.setUsername(createEmployeeDTO.getEmail());
-        users.setPassword(createEmployeeDTO.getPassword());
+        users.setUsername( createEmployeeDTO.getEmail());
+        users.setPassword(bCryptPasswordEncoder.encode(createEmployeeDTO.getPassword()));
         users.setRole("ROLE_EMPLOYEE");
         users.setLinkedEntityId(employee.getEmployeeId().toString());
         users.setEntityType("EMPLOYEE");

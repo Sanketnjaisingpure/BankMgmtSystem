@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.chrono.ChronoLocalDate;
@@ -38,12 +39,15 @@ public class CustomerServiceImpl implements CustomerService {
     private final UserDetailsRepo userDetailsRepo;
     private final IdentityValidator identityValidator;
     private final MaskedNumber maskedNumber;
+    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+
     private static final Logger log = LoggerFactory.getLogger(CustomerServiceImpl.class);
 
 
     @Autowired
     public CustomerServiceImpl(CustomerRepository customerRepository,@Lazy AccountService accountService,
             @Lazy CardRepository cardRepository,
+            BCryptPasswordEncoder bCryptPasswordEncoder,
             UserDetailsRepo userDetailsRepo,
             MaskedNumber maskedNumber,
             IdentityValidator identityValidator
@@ -54,6 +58,7 @@ public class CustomerServiceImpl implements CustomerService {
         this.modelMapper = modelMapper;
         this.cardRepository = cardRepository;
         this.identityValidator = identityValidator;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.accountService = accountService;
     }
 
@@ -118,7 +123,7 @@ public class CustomerServiceImpl implements CustomerService {
             Users  users = new Users();
 
             users.setUsername(createCustomerDTO.getEmail());
-            users.setPassword(createCustomerDTO.getPassword());
+            users.setPassword(bCryptPasswordEncoder.encode(createCustomerDTO.getPassword()));
             users.setRole("ROLE_CUSTOMER");
             users.setLinkedEntityId(customer.getCustomerId().toString());
             users.setEntityType("CUSTOMER");
