@@ -44,7 +44,6 @@ public class Branch {
     @JsonManagedReference
     private List<Account> accountList = new ArrayList<>();
 
-
 /*
 * {
   "branchName": "Civil Lines Branch",

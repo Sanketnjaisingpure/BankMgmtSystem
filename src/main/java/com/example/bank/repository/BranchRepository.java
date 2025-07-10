@@ -15,5 +15,4 @@ public interface BranchRepository extends JpaRepository<Branch, Long> {
     @Query("select e from Branch e where e.bank.bankId = :bankId")
     List<Branch> findByBank_BankId(@Param("bankId") UUID bankId);
 
-
 }
