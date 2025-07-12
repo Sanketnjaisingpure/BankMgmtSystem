@@ -1,21 +1,15 @@
 package com.example.bank.repository;
 
-import com.example.bank.Enum.AccountStatus;
 import com.example.bank.Enum.AccountType;
-import com.example.bank.Enum.IdentityProofType;
 import com.example.bank.model.Account;
 import com.example.bank.model.Address;
-import com.example.bank.model.Branch;
 import com.example.bank.model.Customer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,11 +19,16 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class AccountRepositoryTest {
 
-    @Autowired
-    private AccountRepository accountRepository;
+    private final AccountRepository accountRepository;
+
+
+    private final CustomerRepository customerRepository;
 
     @Autowired
-    private CustomerRepository customerRepository;
+    public AccountRepositoryTest(AccountRepository accountRepository, CustomerRepository customerRepository) {
+        this.accountRepository = accountRepository;
+        this.customerRepository = customerRepository;
+    }
 
     @Test
     void findAllCustomerAccountByCustomerId() {
@@ -99,7 +98,6 @@ class AccountRepositoryTest {
         exists = accountRepository.existsByAccountNumber("1234567890");
         assertTrue(exists, "Account number should exist in the repository");
 
-        String accountNumber = account.getAccountNumber();
 
     }
 }

@@ -6,27 +6,32 @@ import com.example.bank.model.Branch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest // Loads the full Spring application context
-@Transactional // Ensures each test method runs in a transaction and rolls back changes
+@DataJpaTest
+@ActiveProfiles("test")
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class BranchRepositoryTest {
 
-    @Autowired
-    private BranchRepository branchRepository;
+
+
+    private final BranchRepository branchRepository;
+
+    private final BankRepository bankRepository; // Needed to save the Bank entity
 
     @Autowired
-    private BankRepository bankRepository; // Needed to save the Bank entity
-
-    @Autowired
-    private AddressRepository addressRepository; // Needed if you explicitly save addresses or manage them for other tests
+    public BranchRepositoryTest(BranchRepository branchRepository, BankRepository bankRepository) {
+        this.branchRepository = branchRepository;
+        this.bankRepository = bankRepository;
+    }
 
     // Optional: Use @BeforeEach to ensure a clean state, though @Transactional often handles this for tests.
     // This is more useful if you have data that persists across transactions or want to guarantee isolation beyond rollback.
@@ -35,9 +40,6 @@ class BranchRepositoryTest {
         // Clear data from previous tests if @Transactional isn't fully sufficient or for specific scenarios.
         // For @Transactional tests, usually not needed as rollback handles cleanup.
         // If you were testing outside @Transactional, this would be crucial.
-        // branchRepository.deleteAllInBatch(); // Use InBatch for performance
-        // bankRepository.deleteAllInBatch();
-        // addressRepository.deleteAllInBatch();
     }
 
     @Test
@@ -106,7 +108,7 @@ class BranchRepositoryTest {
         // Assert that specific branches are present and their details are correct
         List<String> branchNames = foundBranches.stream()
                 .map(Branch::getBranchName)
-                .collect(Collectors.toList());
+                .toList();
 
         assertTrue(branchNames.contains("Mumbai Fort Branch"), "Should find 'Mumbai Fort Branch'");
         assertTrue(branchNames.contains("Pune Shivaji Nagar Branch"), "Should find 'Pune Shivaji Nagar Branch'");
@@ -137,7 +139,6 @@ class BranchRepositoryTest {
         // THEN: Assert that the list is empty
         assertNotNull(foundBranches, "The list should not be null even if empty.");
         assertTrue(foundBranches.isEmpty(), "The list of branches should be empty for a non-existent bank ID.");
-        assertEquals(0, foundBranches.size(), "The size of the list should be 0.");
     }
 
     @Test
@@ -154,7 +155,6 @@ class BranchRepositoryTest {
         // THEN: Assert that the list is empty
         assertNotNull(foundBranches, "The list should not be null even if empty.");
         assertTrue(foundBranches.isEmpty(), "The list of branches should be empty for a bank with no branches.");
-        assertEquals(0, foundBranches.size(), "The size of the list should be 0.");
 
     }
 }
