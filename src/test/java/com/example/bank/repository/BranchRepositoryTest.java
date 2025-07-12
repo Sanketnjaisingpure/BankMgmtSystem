@@ -122,6 +122,7 @@ class BranchRepositoryTest {
         assertNotNull(mumbaiBranch.getAddress(), "Mumbai Fort Branch should have an address.");
         assertEquals("Mumbai", mumbaiBranch.getAddress().getCity());
         assertEquals("400001", mumbaiBranch.getAddress().getZipCode());
+        assertNotEquals("Null", mumbaiBranch.getAddress().getState(), "State should not be null or empty.");
         assertEquals(bank.getBankId(), mumbaiBranch.getBank().getBankId());
     }
 
@@ -154,5 +155,6 @@ class BranchRepositoryTest {
         assertNotNull(foundBranches, "The list should not be null even if empty.");
         assertTrue(foundBranches.isEmpty(), "The list of branches should be empty for a bank with no branches.");
         assertEquals(0, foundBranches.size(), "The size of the list should be 0.");
+
     }
 }

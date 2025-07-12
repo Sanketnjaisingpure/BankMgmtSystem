@@ -85,7 +85,8 @@ public class BranchServiceImpl implements BranchService {
         branch.setBank(bank);
         String bankName = bank.getBankName();
         String prefix = IFSCUtil.getBankIfscPrefix(bankName);
-        String ifscCode = prefix + String.format("%03d", new Random().nextInt(10000));
+        int random_number =  new Random().nextInt(10000); // Generate a random number between 0 and 9999
+        String ifscCode = prefix + String.format("%03d", random_number);
         branch.setIfscCode(ifscCode);
         address.setBranch(branch);     // very important for @OneToOne(mappedBy="branch")
         branch.setAddress(address);    // important for cascade to persist address
