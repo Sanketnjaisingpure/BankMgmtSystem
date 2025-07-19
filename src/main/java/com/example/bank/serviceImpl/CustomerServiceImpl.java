@@ -1,6 +1,7 @@
 package com.example.bank.serviceImpl;
 
 
+import com.example.bank.Enum.AccountStatus;
 import com.example.bank.Enum.CardStatus;
 import com.example.bank.Enum.LoanStatus;
 import com.example.bank.dto.*;
@@ -73,10 +74,10 @@ public class CustomerServiceImpl implements CustomerService {
                 throw new RuntimeException("Date of Birth cannot be in future");
             }
 
-
             if(!identityValidator.nameValidate(createCustomerDTO.getFirstName()) ||
                     !identityValidator.nameValidate(createCustomerDTO.getMiddleName()) ||
                     !identityValidator.nameValidate(createCustomerDTO.getLastName())) {
+
                 log.warn("Invalid name format");
                 throw new RuntimeException("Invalid name format");
             }
@@ -113,7 +114,9 @@ public class CustomerServiceImpl implements CustomerService {
             customer.setCreatedAt(LocalDateTime.now());
 
 
-            customerRepository.save(customer);
+            Customer savedCustomer =   customerRepository.save(customer);
+
+            log.info("customer id {}", savedCustomer.getCustomerId());
 
             if (userDetailsRepo.findByUsername(createCustomerDTO.getEmail()) != null) {
                 log.warn("User with email {} already exists", createCustomerDTO.getEmail());
@@ -125,15 +128,12 @@ public class CustomerServiceImpl implements CustomerService {
             users.setUsername(createCustomerDTO.getEmail());
             users.setPassword(bCryptPasswordEncoder.encode(createCustomerDTO.getPassword()));
             users.setRole("ROLE_CUSTOMER");
-            users.setLinkedEntityId(customer.getCustomerId().toString());
+            users.setLinkedEntityId(savedCustomer.getCustomerId().toString());
             users.setEntityType("CUSTOMER");
 
             userDetailsRepo.save(users);
             log.info("Customer {} is created successfully ",
-                    maskedNumber.maskNumber(customer.getCustomerId().toString()));
-
-
-
+                    maskedNumber.maskNumber(savedCustomer.getCustomerId().toString()));
             return modelMapper.map(createCustomerDTO, CustomerDTO.class);
 
     }
@@ -230,9 +230,13 @@ public class CustomerServiceImpl implements CustomerService {
             cardRepository.save(card);
         });
 
-        if(customer.getAccountList().isEmpty()) {
-            log.warn("Customer has no account associated with it");
-            throw new IllegalArgumentException("Customer has no account associated with it");
+        if(!customer.getAccountList().isEmpty()) {
+            customer.getAccountList().forEach(account -> {
+                account.setAccountStatus(AccountStatus.INACTIVE);
+
+            });
+            log.warn("Customer has  account associated with it");
+            throw new IllegalArgumentException("Customer has  account associated with it");
         }
 
         customerRepository.delete(customer);

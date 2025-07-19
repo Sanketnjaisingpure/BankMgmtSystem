@@ -20,5 +20,7 @@ public class CustomerDTO {
 
     private String phoneNumber;
 
+    private String email;
+
     private AddressDTO addressDTO;
 }
