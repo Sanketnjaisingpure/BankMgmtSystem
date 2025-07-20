@@ -1,12 +1,17 @@
 package com.example.bank.serviceImpl;
 
+import com.example.bank.Enum.CardType;
 import  com.example.bank.Enum.IdentityProofType;
+import com.example.bank.Enum.LoanStatus;
 import com.example.bank.dto.*;
+import com.example.bank.exception.ResourceNotFoundException;
 import com.example.bank.model.*;
 import com.example.bank.repository.CustomerRepository;
 import com.example.bank.repository.UserDetailsRepo;
 import com.example.bank.service.AccountService;
 import com.example.bank.utils.IdentityValidator;
+import com.example.bank.utils.MaskedNumber;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,11 +19,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.chrono.ChronoLocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -47,240 +56,422 @@ class CustomerServiceImplTest {
     @Mock
     private AccountService accountService;
 
+    @Mock
+    private MaskedNumber maskedNumber;
 
     @InjectMocks
     private CustomerServiceImpl customerService;
 
 
-    /*Create helper method */
+    private Customer testCustomer;
+    private Address testAddress;
+    private AddressDTO addressDTO;
+    private Branch testBranch;
+    private CreateCustomerDTO dto;
+    private Bank testBank;
+    private UpdateCustomerDTO updateCustomerDTO;
+    private Loan testLoan;
+    private Card testCard;
 
-    private AddressDTO validAddressDTO() {
-        AddressDTO addressDTO = new AddressDTO();
+    @BeforeEach
+    void setUp() {
+        // This method is called before each test to set up the mocks and inject them into the service
+
+        addressDTO = new AddressDTO();
         addressDTO.setStreet("123 Main St");
         addressDTO.setCity("Springfield");
         addressDTO.setState("IL");
         addressDTO.setZipCode("62701");
         addressDTO.setCountry("USA");
-        return addressDTO;
-    }
 
-    private CreateCustomerDTO validDto(){
-        CreateCustomerDTO dto = new CreateCustomerDTO();
+        dto = new CreateCustomerDTO();
         dto.setFirstName("John");
         dto.setMiddleName("Smith");
         dto.setLastName("Doe");
         dto.setEmail("john12@gmail.com");
         dto.setPhoneNumber("1234567890");
         dto.setDateOfBirth(LocalDate.parse("1990-01-01"));
-        dto.setAddressDTO(validAddressDTO());
+        dto.setAddressDTO(addressDTO);
         dto.setPassword("password123");
         dto.setIdentityProofType(IdentityProofType.PASSPORT);
         dto.setIdentityProofId("A123456789");
 
-        return dto;
+        testAddress = new Address();
+        testAddress.setStreet("123 Main St");
+        testAddress.setCity("Springfield");
+        testAddress.setState("IL");
+        testAddress.setZipCode("627012");
+        testAddress.setCountry("USA");
+
+
+
+       testCustomer = new Customer();
+        testCustomer.setCustomerId(UUID.randomUUID());
+        testCustomer.setFirstName("John");
+        testCustomer.setMiddleName("Smith");
+        testCustomer.setLastName("Doe");
+        testCustomer.setEmail("john@gmail.com");
+        testCustomer.setPhoneNumber("1234567890");
+        testCustomer.setDateOfBirth(LocalDate.parse("1990-01-01"));;
+        testCustomer.setAddress(testAddress);
+        testCustomer.setPassword("password123");
+        testCustomer.setIdentityProofType(IdentityProofType.PASSPORT);
+        testCustomer.setIdentityProofId("A123456789");
+        testCustomer.setLoanList(List.of(new Loan()));
+
+        testBank = new Bank();
+        testBank.setBankId(UUID.randomUUID());
+        testBank.setBankName("Test Bank");
+
+        testBranch = new Branch();
+        testBranch.setBranchId(1L);
+        testBranch.setBank(testBank);
+        testBranch.setBranchName("Main Branch");
+        testBranch.setIfscCode("TREE12345");
+        testBranch.setAddress(testAddress);
+
+
+        updateCustomerDTO = new UpdateCustomerDTO();
+        updateCustomerDTO.setAddressDTO(addressDTO);
+        updateCustomerDTO.setEmail("jane@gmail.com");
+        updateCustomerDTO.setPhoneNumber("0987654321");
+        updateCustomerDTO.setIdentityProofType(IdentityProofType.PASSPORT);
+        updateCustomerDTO.setIdentityProofId("B987654321");
+
+        testLoan = new Loan();
+        testLoan.setLoanId(UUID.randomUUID());
+
+        testCustomer.setLoanList(List.of(testLoan));
+
+        testCard = new Card();
+        testCard.setCustomer(testCustomer);
+        testCard.setCardNumber(1234567890L);
+        testCard.setCardType(CardType.CREDIT);
+
     }
 
     @Test
-    void create_customerSuccess(){
-        CreateCustomerDTO dto = validDto();
-        AddressDTO addressDTO = validAddressDTO();
+    void findCustomerById_Success(){
 
-        // validate Names
-        when(identityValidator.nameValidate(dto.getFirstName())).thenReturn(true);
-        when(identityValidator.nameValidate(dto.getMiddleName())).thenReturn(true);
-        when(identityValidator.nameValidate(dto.getLastName())).thenReturn(true);
+        Customer customer = testCustomer;
+        customer.setCustomerId(UUID.randomUUID());
 
-        when(identityValidator.isValid(dto.getIdentityProofType() , dto.getIdentityProofId())).thenReturn(true);
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
 
-        // checking whether email , phone number, identity proof type and id already exists
-        when(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(dto.getEmail(),
-                dto.getPhoneNumber(), dto.getIdentityProofType(), dto.getIdentityProofId())).thenReturn(false);
+        Customer foundCustomer = customerService.findCustomerById(customer.getCustomerId());
+        assertNotNull(foundCustomer);
+        assertEquals(customer.getCustomerId(), foundCustomer.getCustomerId());
+    }
 
-        when(userDetailsRepo.findByUsername(dto.getEmail())).thenReturn(null);
+    @Test
+    void findCustomerById_ThrowsException() {
+        UUID customerId = UUID.randomUUID();
 
-        // encoding password
-        when(encoder.encode(dto.getPassword())).thenReturn("encodedPassword");
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+        when(customerRepository.findById(customerId)).thenReturn(Optional.empty());
 
-        when(modelMapper.map(dto.getAddressDTO(), Address.class)).thenReturn(new Address());
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> customerService.findCustomerById(customerId));
 
-        Customer savedCustomer = new Customer();
-        UUID fakedUUID = UUID.randomUUID();
-        savedCustomer.setCustomerId(fakedUUID);
-        when(customerRepository.save(any(Customer.class))).thenReturn(savedCustomer);
+        assertEquals("Customer not found", ex.getMessage());
+    }
 
+    @Test
+    void getCustomerDTOById_Success() {
+        Customer customer = testCustomer;
+        customer.setCustomerId(UUID.randomUUID());
 
-        // Return DTO
-        CustomerDTO expected = new CustomerDTO();
-        expected.setAddressDTO(addressDTO);
-        when(modelMapper.map(dto, CustomerDTO.class)).thenReturn(expected);
+        CustomerDTO customerDTO = new CustomerDTO();
 
-        // Actual method call
-        CustomerDTO actual = customerService.createCustomer(dto);
-        
-        // then verify
-        assertSame(expected, actual);
-        verify(customerRepository).save(any(Customer.class));
-        verify(userDetailsRepo).save(any(Users.class));
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
+        when(modelMapper.map(customer, CustomerDTO.class)).thenReturn(customerDTO);
+        when(modelMapper.map(customer.getAddress(), AddressDTO.class)).thenReturn(addressDTO);
+        CustomerDTO foundCustomerDTO = customerService.getCustomerDTOById(customer.getCustomerId());
+        foundCustomerDTO.setAddressDTO(addressDTO);
+        assertNotNull(foundCustomerDTO);
 
     }
 
+    @Test
+    void getAllCustomer_Success() {
+        Customer customer1 = testCustomer;
+        customer1.setCustomerId(UUID.randomUUID());
+
+        Customer customer2 = testCustomer;
+        customer2.setCustomerId(UUID.randomUUID());
+
+        List<Customer> customers = List.of(customer1, customer2);
+
+        when(modelMapper.map(customer1, CustomerDTO.class)).thenReturn(new CustomerDTO());
+        when(modelMapper.map(customer2, CustomerDTO.class)).thenReturn(new CustomerDTO());
+
+        when(modelMapper.map(customer1.getAddress(), AddressDTO.class)).thenReturn(new AddressDTO());
+        when(modelMapper.map(customer2.getAddress(), AddressDTO.class)).thenReturn(new AddressDTO());
+
+        List<CustomerDTO> customerDTOs = new ArrayList<>();
+        customers.forEach(customer -> {
+            CustomerDTO customerDTO = modelMapper.map(customer, CustomerDTO.class);
+            customerDTO.setAddressDTO(modelMapper.map(customer.getAddress(), AddressDTO.class));
+            customerDTOs.add(customerDTO);
+        });
+
+       assertNotNull(customerDTOs);
+    }
 
     @Test
-    void create_customer_inValidName(){
-        CreateCustomerDTO dto = validDto();
-        dto.setFirstName("3234~~");
-        dto.setMiddleName("234234234");
-        when(identityValidator.nameValidate(dto.getFirstName())).thenReturn(false);
-        // it is expected to throw a RuntimeException
-        // when customerService.createCustomer(dto) is called
+    void getAllCustomer_EmptyList() {
+        when(customerRepository.findAll()).thenReturn(new ArrayList<>());
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> customerService.getAllCustomer());
+
+        assertEquals("Customers not found", ex.getMessage());
+
+    }
+
+    @Test
+    void getCustomerAccounts_Success() {
+        Customer customer = testCustomer;
+        customer.setCustomerId(UUID.randomUUID());
+
+
+
+        Account account1 = new Account();
+        account1.setAccountId(UUID.randomUUID());
+        account1.setAccountNumber("1234567890");
+        account1.setBalance(BigDecimal.valueOf(1000.0));
+        account1.setCustomer(customer);
+        account1.setBranch(testBranch);
+
+        Account account2 = new Account();
+        account2.setAccountId(UUID.randomUUID());
+        account2.setAccountNumber("0987654321");
+        account2.setBalance(BigDecimal.valueOf(2000.0));
+        account2.setCustomer(customer);
+        account2.setBranch(testBranch);
+
+        List<Account> accounts = List.of(account1, account2);
+
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
+
+        when(accountService.FindAllCustomerAccountByCustomerId(customer.getCustomerId())).thenReturn(accounts);
+
+        when(modelMapper.map(account1, AccountDTO.class)).thenReturn(new AccountDTO());
+        when(modelMapper.map(account2, AccountDTO.class)).thenReturn(new AccountDTO());
+
+
+        List<AccountDTO> accountDTOs = customerService.getCustomerAccounts(customer.getCustomerId());
+
+        assertNotNull(accountDTOs);
+        assertEquals(2, accountDTOs.size());
+    }
+
+    @Test
+    void updateCustomer_Success() {
+        Customer customer = testCustomer;
+        customer.setCustomerId(UUID.randomUUID());
+
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+
+        when(modelMapper.map(customer, CustomerDTO.class)).thenReturn(new CustomerDTO());
+
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
+
+        when(customerService.updateCustomerDetails(customer.getCustomerId(), updateCustomerDTO)).thenReturn(new CustomerDTO());
+
+        CustomerDTO updatedCustomerDTO = customerService.updateCustomerDetails(customer.getCustomerId(), updateCustomerDTO);
+
+        assertNotNull(updatedCustomerDTO);
+
+    }
+
+    @Test
+    void deleteCustomer_Success(){
+
+        Customer customer = testCustomer;
+        customer.setCustomerId(UUID.randomUUID());
+
+        testLoan = new Loan();
+        testLoan.setLoanStatus(LoanStatus.PENDING);
+        testLoan.setCustomer(customer);
+        customer.setLoanList(List.of(testLoan));
+
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
+
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
+
+
+
+        doNothing().when(customerRepository).delete(customer);
+
+        customerService.deleteCustomer(customer.getCustomerId());
+
+        verify(customerRepository, times(1)).delete(customer);
+
+    }
+
+    @Test
+    void deleteCustomer_ThrowsException_ActiveLoan(){
+        Customer customer = testCustomer;
+        customer.setCustomerId(UUID.randomUUID());
+
+        testLoan = new Loan();
+        testLoan.setLoanStatus(LoanStatus.ACTIVE);
+        testLoan.setCustomer(customer);
+        customer.setLoanList(List.of(testLoan));
+
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****678");
+
+        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> customerService.deleteCustomer(customer.getCustomerId()));
+
+        assertEquals("Customer has active loan associated with it", ex.getMessage());
+    }
+
+    @Test
+    void deleteCustomer_ThrowsException_CustomerNotFound() {
+        UUID customerId = UUID.randomUUID();
+
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+        when(customerRepository.findById(customerId)).thenReturn(Optional.empty());
+
+        ResourceNotFoundException ex = assertThrows(ResourceNotFoundException.class, () -> customerService.deleteCustomer(customerId));
+
+        assertEquals("Customer not found", ex.getMessage());
+    }
+
+    @Test
+    void createCustomer_Success() {
+
+        CreateCustomerDTO createCustomerDTO = dto;
+
+
+        when(identityValidator.nameValidate(anyString())).thenReturn(true);
+
+        when(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(createCustomerDTO.getEmail(),
+                createCustomerDTO.getPhoneNumber(),createCustomerDTO.getIdentityProofType(),createCustomerDTO.getIdentityProofId())).thenReturn(false);
+
+        when(identityValidator.isValid(createCustomerDTO.getIdentityProofType(),createCustomerDTO.getIdentityProofId())).thenReturn(true);
+        when(userDetailsRepo.findByUsername(createCustomerDTO.getEmail())).thenReturn(null);
+
+        when(modelMapper.map(createCustomerDTO.getAddressDTO(), Address.class)).thenReturn(testAddress);
+
+        testCustomer.setAddress(testAddress);
+        Users user = new Users();
+        user.setUsername(createCustomerDTO.getEmail());
+        when(encoder.encode(anyString())).thenReturn("encodedPassword");
+
+        when(userDetailsRepo.save(any(Users.class))).thenReturn(new Users());
+        when(customerRepository.save(any(Customer.class))).thenReturn(testCustomer);
+        when(maskedNumber.maskNumber(anyString())).thenReturn("*****67890");
+
+        CustomerDTO expectedCustomerDTO = new CustomerDTO();
+        expectedCustomerDTO.setFirstName("John");
+
+        when(modelMapper.map(createCustomerDTO, CustomerDTO.class)).thenReturn(expectedCustomerDTO);
+
+        CustomerDTO customerDTO = customerService.createCustomer(createCustomerDTO);
+
+        assertNotNull(customerDTO);
+
+        assertEquals("John", customerDTO.getFirstName());
+
+    }
+
+    @Test
+    void createCustomer_ThrowsException_EmailAlreadyExists() {
+        CreateCustomerDTO createCustomerDTO = dto;
+        createCustomerDTO.setEmail("john@gmail.com");
+
+        when(identityValidator.nameValidate(anyString())).thenReturn(true);
+
+        when(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(
+                createCustomerDTO.getEmail(),
+                createCustomerDTO.getPhoneNumber(),
+                createCustomerDTO.getIdentityProofType(),
+                createCustomerDTO.getIdentityProofId()))
+                .thenReturn(false);
+
+
+
+        when(identityValidator.isValid(createCustomerDTO.getIdentityProofType(), createCustomerDTO.getIdentityProofId())).thenReturn(true);
+
+        when(userDetailsRepo.findByUsername(createCustomerDTO.getEmail())).thenReturn(new Users());
+
+        when(customerRepository.save(any(Customer.class))).thenReturn(testCustomer);
+
         RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(dto));
-        assertEquals("Invalid name format", ex.getMessage());
+
+        assertEquals("User with this email already exists", ex.getMessage());
+    }
+
+    @Test
+    void createCustomer_ThrowsException_existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(){
+        CreateCustomerDTO createCustomerDTO = dto;
+
+        when(identityValidator.nameValidate(anyString())).thenReturn(true);
+
+        when(identityValidator.isValid(createCustomerDTO.getIdentityProofType(), createCustomerDTO.getIdentityProofId())).thenReturn(true);
+
+        when(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(
+                createCustomerDTO.getEmail(),
+                createCustomerDTO.getPhoneNumber(),
+                createCustomerDTO.getIdentityProofType(),
+                createCustomerDTO.getIdentityProofId()))
+                .thenReturn(true);
+
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(createCustomerDTO));
+
+        assertEquals("Customer already exists with the same email, phone number and identity proof type", ex.getMessage());
+    }
+
+
+    @Test
+    void createCustomer_ThrowsException_InvalidEmail() {
+        CreateCustomerDTO createCustomerDTO = dto;
+        createCustomerDTO.setEmail("invalid-email");
 
     }
 
     @Test
-    void create_customer_inValidIdentityProof(){
-        CreateCustomerDTO dto = validDto();
-        dto.setIdentityProofId("!!!!!!!");
-        dto.setIdentityProofType(IdentityProofType.PASSPORT);
+    void createCustomer_ThrowsException_InvalidDateOfBirth() {
+        CreateCustomerDTO createCustomerDTO = dto;
+        createCustomerDTO.setDateOfBirth(LocalDate.now().plusDays(1));
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(createCustomerDTO));
 
-        // why I need to mock this?
-        // because mockito by default will take name as dummy value, and service method can return false,
-        // hence retuning invalid name format , hence we need to mock it
-        when(identityValidator.nameValidate(dto.getFirstName())).thenReturn(true);
-        when(identityValidator.nameValidate(dto.getMiddleName())).thenReturn(true);
-        when(identityValidator.nameValidate(dto.getLastName())).thenReturn(true);
+        assertEquals("Date of Birth cannot be in future", ex.getMessage());
+    }
 
-        when(identityValidator.isValid(dto.getIdentityProofType(), dto.getIdentityProofId())).thenReturn(false);
-        // it is expected to throw a RuntimeException
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(dto));
+
+    @Test
+    void createCustomer_ThrowsException_identityValidator(){
+        CreateCustomerDTO createCustomerDTO = dto;
+        createCustomerDTO.setIdentityProofId("invalid-id");
+
+        when(identityValidator.nameValidate(anyString())).thenReturn(true);
+
+        when(identityValidator.isValid(createCustomerDTO.getIdentityProofType(), createCustomerDTO.getIdentityProofId())).thenReturn(false);
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(createCustomerDTO));
+
         assertEquals("Invalid identity proof type or id", ex.getMessage());
     }
 
     @Test
-    void create_customer_futureDateOfBirth() {
-        CreateCustomerDTO dto = validDto();
-        dto.setDateOfBirth(LocalDate.now().plusDays(1));
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(dto));
-        assertEquals("Date of Birth cannot be in future", ex.getMessage());
-    }
+    void createCustomer_ThrowsException_InvalidName() {
+        CreateCustomerDTO createCustomerDTO = dto;
+        createCustomerDTO.setFirstName("2230~~~");
 
-    @Test
-    void getCustomerDTOById() {
+        when(identityValidator.nameValidate(anyString())).thenReturn(false);
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> customerService.createCustomer(createCustomerDTO));
 
-        UUID fakeId = UUID.randomUUID();
-
-        Customer customer = new Customer();
-        customer.setCustomerId(fakeId);
-
-        CustomerDTO customerDTO = new CustomerDTO();
-
-        AddressDTO addressDTO  = new AddressDTO();
-
-        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
-        when(modelMapper.map(customer, CustomerDTO.class)).thenReturn(customerDTO);
-        when(modelMapper.map(customer.getAddress(), AddressDTO.class)).thenReturn(addressDTO);
-        // Then call actual method
-        CustomerDTO result = customerService.getCustomerDTOById(customer.getCustomerId());
-        result.setAddressDTO(addressDTO);
-        assertNotNull(result);
+        assertEquals("Invalid name format", ex.getMessage());
 
     }
 
-    @Test
-    void findCustomerById() {
-        UUID fakeId = UUID.randomUUID();
-
-        Customer customer = new Customer();
-        customer.setCustomerId(fakeId);
-
-        when(customerRepository.findById(fakeId)).thenReturn(Optional.of(customer));
-        Customer result = customerService.findCustomerById(fakeId);
-        assertNotNull(result);
-    }
-
-    @Test
-    void getAllCustomer() {
-        Customer customer1 = new Customer();
-        Customer customer2 = new Customer();
-        when(customerRepository.findAll()).thenReturn(List.of(customer2, customer1));
-        List<CustomerDTO> result = customerService.getAllCustomer();
-        assertNotNull(result);
-
-    }
-
-    @Test
-    void updateCustomerDetails() {
-
-        UUID fakeId = UUID.randomUUID();
-        Customer customer = new Customer();
-        customer.setCustomerId(fakeId);
-
-        Address address = new Address();
-        customer.setAddress(address);
-
-        AddressDTO addressDTO = new AddressDTO();
-        when(customerRepository.findById(customer.getCustomerId())).thenReturn(Optional.of(customer));
-
-        UpdateCustomerDTO updateCustomerDTO = new UpdateCustomerDTO();
-        updateCustomerDTO.setAddressDTO(addressDTO);
-
-        CustomerDTO customerDTO = new CustomerDTO();
-
-        when(customerRepository.save(customer)).thenReturn(customer);
-        when(modelMapper.map(customer, CustomerDTO.class)).thenReturn(new CustomerDTO());
-        when(customerService.updateCustomerDetails(customer.getCustomerId(), updateCustomerDTO)).thenReturn(customerDTO);
-
-        CustomerDTO result = customerService.updateCustomerDetails(customer.getCustomerId(), updateCustomerDTO);
-
-        assertNotNull(result);
-
-    }
-
-    @Test
-    void deleteCustomer() {
-
-        UUID fakeId = UUID.randomUUID();
-        Customer customer = new Customer();
-        customer.setCustomerId(fakeId);
-
-        when(customerRepository.findById(fakeId)).thenReturn(Optional.of(customer));
-        doNothing().when(customerRepository).delete(customer);
-
-        customerService.deleteCustomer(fakeId);
-
-        verify(customerRepository, times(1)).delete(customer);
-    }
-
-    @Test
-    void getCustomerAccounts() {
-
-        UUID fakeId = UUID.randomUUID();
-
-//        when(maskedNumber.maskNumber(fakeId.toString())).thenReturn("2u398u2398");
-
-        Customer customer = new Customer();
-        customer.setCustomerId(fakeId);
-        customer.setFirstName("John");
-        customer.setLastName("Doe");
-        customer.setMiddleName("Smith");
-
-        Bank bank = new Bank();
-        bank.setBankName("Test Bank");
-
-        Branch branch = new Branch();
-        branch.setBranchName("Test Branch");
-        branch.setBank(bank);
-
-        Account account = new Account();
-        account.setAccountId(UUID.randomUUID());
-        account.setAccountNumber("1234567890");
-        account.setCustomer(customer);
-        account.setBranch(branch);
-
-        List<Account> accounts =  accountService.FindAllCustomerAccountByCustomerId(fakeId);
-
-        assertNotNull(accounts);
-
-    }
 }

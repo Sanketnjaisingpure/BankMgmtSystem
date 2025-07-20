@@ -87,7 +87,7 @@ public class CustomerServiceImpl implements CustomerService {
 
             if (!isValidIdentityProof) {
                 log.warn("Invalid identity proof type or id");
-                throw new RuntimeException("Invalid identity proof type or id");
+                throw new IllegalArgumentException("Invalid identity proof type or id");
             }
 
             if(customerRepository.existsByEmailAndPhoneNumberAndIdentityProofTypeAndIdentityProofId(createCustomerDTO.getEmail(), createCustomerDTO.getPhoneNumber(),
@@ -155,8 +155,7 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = customerRepository.findById(customerId).orElseThrow(()-> {
             log.warn("Customer {} not found ", maskedNumber.maskNumber(customerId.toString()));
             return new ResourceNotFoundException("Customer not found");
-        }
-        );
+        });
         log.info("Customer {} found successfully ", maskedNumber.maskNumber(customer.getCustomerId().toString()));
         return customer;
     }
@@ -231,12 +230,7 @@ public class CustomerServiceImpl implements CustomerService {
         });
 
         if(!customer.getAccountList().isEmpty()) {
-            customer.getAccountList().forEach(account -> {
-                account.setAccountStatus(AccountStatus.INACTIVE);
-
-            });
-            log.warn("Customer has  account associated with it");
-            throw new IllegalArgumentException("Customer has  account associated with it");
+            customer.getAccountList().forEach(account -> account.setAccountStatus(AccountStatus.INACTIVE));
         }
 
         customerRepository.delete(customer);

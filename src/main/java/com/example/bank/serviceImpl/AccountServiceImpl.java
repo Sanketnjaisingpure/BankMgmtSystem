@@ -83,7 +83,7 @@ public class AccountServiceImpl implements AccountService {
         log.info("Checking if Account Status is Closed or not");
         if(account.getAccountStatus().equals(AccountStatus.CLOSED)){
             log.warn("Account: {} Status is Closed  " ,this.maskedNumber.maskNumber(accountNumber));
-            throw new ResourceNotFoundException("Account Not found");
+            throw new ResourceNotFoundException("Account is Closed");
         }
 
         log.info("Account: {} found successfully ",this.maskedNumber.maskNumber(accountNumber));
@@ -204,7 +204,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public void activateAccount(String accountNumber) {
         log.info("Activating Account: {} initiated ", maskedNumber.maskNumber(accountNumber));
-        Account account = this.getAccountByAccountNumber(accountNumber);
+        Account account = accountRepository.getAccountByAccountNumber(accountNumber);
 
         if (account.getAccountStatus().equals(AccountStatus.ACTIVE)) {
             log.warn("Account is already Active or Account: {} " , maskedNumber.maskNumber(accountNumber));
