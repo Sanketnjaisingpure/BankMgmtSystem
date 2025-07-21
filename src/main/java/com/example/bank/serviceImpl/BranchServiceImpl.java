@@ -26,16 +26,14 @@ public class BranchServiceImpl implements BranchService {
     private final BranchRepository branchRepository;
     private final ModelMapper modelMapper;
     private final BankRepository bankRepository;
-    private final IFSCUtil ifscUtil;
     private final MaskedNumber maskedNumber;
 
     private static final Logger log = LoggerFactory.getLogger(BranchServiceImpl.class);
 
     @Autowired
     public BranchServiceImpl(BranchRepository branchRepository, ModelMapper modelMapper, BankRepository bankRepository,
-                            IFSCUtil ifscUtil , MaskedNumber maskedNumber) {
+                           MaskedNumber maskedNumber) {
         this.branchRepository = branchRepository;
-        this.ifscUtil = ifscUtil;
         this.maskedNumber = maskedNumber;
         this.modelMapper = modelMapper;
         this.bankRepository = bankRepository;
@@ -53,7 +51,7 @@ public class BranchServiceImpl implements BranchService {
         log.info("Initiated Finding All Customer by branch Id: {} " , branchId);
         Branch branch = findBranchByBranchId(branchId);
 
-        List<Customer> customerList = branch.getAccountList().stream().map(Account::getCustomer).collect(Collectors.toList());
+        List<Customer> customerList = branch.getAccountList().stream().map(Account::getCustomer).toList();
         if (customerList.isEmpty()){
             log.warn("Customer not found in this branch {}", branch.getBranchName());
             throw new ResourceNotFoundException("Customer not found");
@@ -69,7 +67,7 @@ public class BranchServiceImpl implements BranchService {
 
         if (createBranchDTO==null){
             log.warn("Enter proper values");
-            throw new IllegalArgumentException("Enter values properly ");
+            throw new IllegalArgumentException("Enter values properly");
         }
 
         AddressDTO addressDTO = createBranchDTO.getAddressDTO();
@@ -141,16 +139,11 @@ public class BranchServiceImpl implements BranchService {
     }
 
     @Override
-    public List<CustomerDTO> getCustomerByBranch(long branchId) {
-        log.info("Getting Customer by Branch Id: {} ",branchId);
+    public List<CustomerDTO> getCustomerDTOByBranch(long branchId) {
+        log.info("Getting Customer DTO by Branch Id: {} ",branchId);
 
         List<Customer> customerList = this.getAllCustomerByBranch(branchId);
-        if (customerList.isEmpty()){
-            log.warn("Customer not found");
-            throw new ResourceNotFoundException("Customer not found");
-        }
 
-        log.info("Customer found successfully");
         return customerList.stream().map(customer -> modelMapper.map(customer,CustomerDTO.class)).collect(Collectors.toList());
     }
 
