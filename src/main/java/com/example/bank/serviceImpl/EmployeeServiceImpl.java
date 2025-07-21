@@ -80,7 +80,6 @@ public class EmployeeServiceImpl implements EmployeeService {
             log.warn("User with email {} already exists", createEmployeeDTO.getEmail());
             throw new IllegalArgumentException("User with this email already exists");
         }
-
         users.setUsername( createEmployeeDTO.getEmail());
         users.setPassword(bCryptPasswordEncoder.encode(createEmployeeDTO.getPassword()));
         users.setRole("ROLE_EMPLOYEE");

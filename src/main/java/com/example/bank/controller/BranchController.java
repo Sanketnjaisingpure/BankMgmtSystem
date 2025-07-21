@@ -39,7 +39,7 @@ public class BranchController {
     }
 
     @GetMapping("/customer/{branchId}")
-    public ResponseEntity<List<CustomerDTO>> getAllCustomerByBranch(@PathVariable("branchId") long branchId){
-        return ResponseEntity.ok(branchService.getCustomerByBranch(branchId));
+    public ResponseEntity<List<CustomerDTO>> getAllCustomerDTOByBranch(@PathVariable("branchId") long branchId){
+        return ResponseEntity.ok(branchService.getCustomerDTOByBranch(branchId));
     }
 }

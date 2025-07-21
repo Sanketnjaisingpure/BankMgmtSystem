@@ -71,7 +71,6 @@ public class CardServiceImpl implements CardService {
             log.warn("Customer already has maximum number of cards");
             throw new IllegalArgumentException("Customer already has maximum number of cards");
         }
-
         card.setCustomer(customer);
         Account account = accountService.getAccountByAccountNumber(createCardDTO.getAccountNumber());
 
@@ -95,7 +94,8 @@ public class CardServiceImpl implements CardService {
 
     @Override
     public CardDTO getCardByNumber(long cardNumber) {
-        return modelMapper.map(this.getCardDetailsByCardNumber(cardNumber),CardDTO.class);
+        Card card = this.getCardDetailsByCardNumber(cardNumber);
+        return modelMapper.map(card,CardDTO.class);
     }
 
     @Override
@@ -115,6 +115,10 @@ public class CardServiceImpl implements CardService {
     public void blockCard(long cardNumber) {
         log.info("Blocking card initialized");
         Card card = this.getCardDetailsByCardNumber(cardNumber);
+        if (card.getCardStatus().equals(CardStatus.BLOCKED)){
+            log.warn("Card {} is already blocked", maskedNumber.maskNumber(String.valueOf(cardNumber)));
+            throw new IllegalArgumentException("Card is already blocked");
+        }
         card.setCardStatus(CardStatus.BLOCKED);
         log.info("card block successfully");
         cardRepository.save(card);
@@ -124,6 +128,11 @@ public class CardServiceImpl implements CardService {
     public void activateCard(long cardNumber) {
         log.info("Activating card initialized");
         Card card = this.getCardDetailsByCardNumber(cardNumber);
+        if (card.getCardStatus().equals(CardStatus.ACTIVE)){
+            log.warn("Card {} is already active", maskedNumber.maskNumber(String.valueOf(cardNumber)));
+            throw new IllegalArgumentException("Card is already active");
+        }
+
         card.setCardStatus(CardStatus.ACTIVE);
         log.info("card activated successfully ");
         cardRepository.save(card);

@@ -16,7 +16,7 @@ public interface BranchService {
 
     List<BranchDTO> getAllBranchByBank(UUID bankId);
 
-    List<CustomerDTO>  getCustomerByBranch(long branchId);
+    List<CustomerDTO>  getCustomerDTOByBranch(long branchId);
 
     Branch findBranchByBranchId(Long branchId);
 
