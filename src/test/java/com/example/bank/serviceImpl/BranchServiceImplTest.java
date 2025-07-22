@@ -280,7 +280,6 @@ class BranchServiceImplTest {
     void createBranch_NullInput() {
         // Test case for creating a branch with null input
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-                branchServiceImpl.createBranch(null));
 
         assertEquals("Enter values properly", ex.getMessage());
     }
