@@ -20,7 +20,11 @@ public class UserPrincipal  implements UserDetails {
     // here  need to give authority CUSTOMERS/ USERS OR EMPLOYEES OR ADMINS
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singleton(new SimpleGrantedAuthority(users.getRole().toUpperCase()));
+        String role = users.getRole().toUpperCase();
+        if (!role.startsWith("ROLE_")) {
+            role = "ROLE_" + role;
+        }
+        return Collections.singleton(new SimpleGrantedAuthority(role));
     }
 
     @Override

@@ -58,7 +58,7 @@ public class CustomerController {
         return ResponseEntity.status(HttpStatus.OK).body(customerService.updateCustomerDetails(customerId,updateCustomerDTO));
     }
 
-    @PreAuthorize("hasRole('ROLE_ADMIN'")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     @DeleteMapping("/{customerId}")
     public ResponseEntity<String> deleteCustomerById(@PathVariable("customerId") UUID customerId){
         customerService.deleteCustomer(customerId);

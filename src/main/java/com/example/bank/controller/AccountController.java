@@ -14,7 +14,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/bank-management-system/account")
-@PreAuthorize(" hasRole('ROLE_EMPLOYEE')")
 public class AccountController {
 
     private final AccountService accountService;
@@ -25,6 +24,7 @@ public class AccountController {
     }
 
 
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     @PostMapping("/create-account")
     public ResponseEntity<AccountDTO> createAccount( @Valid @RequestBody CreateAccountDTO createAccountDTO){
         return ResponseEntity.ok(accountService.createAccount(createAccountDTO));
@@ -35,12 +35,14 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAccountDTOById(accountId));
     }
 
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     @PutMapping("/close-account/{accountNumber}")
     public ResponseEntity<String> closeAccount(@PathVariable("accountNumber") String accountNumber){
         accountService.closeAccount(accountNumber);
         return ResponseEntity.ok("Account closed Successfully");
     }
 
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     @PutMapping("/activate-account/{accountNumber}")
     public ResponseEntity<String> activateAccount(@PathVariable("accountNumber") String accountNumber){
         accountService.activateAccount(accountNumber);

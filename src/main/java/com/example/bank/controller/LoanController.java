@@ -16,7 +16,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/bank-management-system/loan")
-@PreAuthorize("hasRole('ROLE_EMPLOYEE')")
 public class LoanController {
 
     private final LoanService loanService;
@@ -26,22 +25,25 @@ public class LoanController {
         this.loanService = loanService;
     }
 
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     @PostMapping("/apply-loan")
     public ResponseEntity<LoanDTO> applyForLoan(@RequestBody LoanApplicationDTO loanApplicationDTO) {
        return ResponseEntity.status(HttpStatus.OK).body(loanService.applyForLoan(loanApplicationDTO));
     }
 
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     @PutMapping("/make-loan-payment")
     public ResponseEntity<LoanInstallmentDTO> makeLoanPayment(@RequestBody LoanApplyDTO loanApplyDTO) {
         return ResponseEntity.status(HttpStatus.OK).body(loanService.makeLoanPayment(loanApplyDTO));
     }
 
+    @PreAuthorize("hasRole('ROLE_EMPLOYEE')")
     @GetMapping("/{loanId}")
     public ResponseEntity<LoanDTO> getLoanById(@PathVariable("loanId") UUID loanId) {
         return ResponseEntity.status(HttpStatus.OK).body(loanService.getLoanById(loanId));
     }
 
-    @PreAuthorize("hasRole('ROLE_CUSTOMER') or hasRole('ROLE_EMPLOYEE')")
+    @PreAuthorize("hasAnyRole('ROLE_CUSTOMER', 'ROLE_EMPLOYEE')")
     @GetMapping("/customer/{customerId}")
     public ResponseEntity<List<LoanDTO>> getLoanCustomerById(@PathVariable("customerId") UUID customerId) {
         return ResponseEntity.status(HttpStatus.OK).body(loanService.getLoanCustomerById(customerId));

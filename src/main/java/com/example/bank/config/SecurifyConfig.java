@@ -43,12 +43,22 @@ public class SecurifyConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-
+                        // Card endpoints: EMPLOYEE only
                         .requestMatchers("/api/bank-management-system/card/**").hasRole("EMPLOYEE")
-
-                        // EMPLOYEE endpoints
+                        // Branch endpoints: ADMIN only
                         .requestMatchers("/api/bank-management-system/branch/**").hasRole("ADMIN")
-
+                        // Account endpoints: EMPLOYEE for most, CUSTOMER for some
+                        .requestMatchers("/api/bank-management-system/account/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
+                        // Loan endpoints: EMPLOYEE for most, CUSTOMER for some
+                        .requestMatchers("/api/bank-management-system/loan/**").hasAnyRole("EMPLOYEE", "CUSTOMER")
+                        // Employee endpoints: EMPLOYEE for most, ADMIN for add-employee
+                        .requestMatchers("/api/bank-management-system/employee/add-employee").hasRole("ADMIN")
+                        .requestMatchers("/api/bank-management-system/employee/**").hasRole("EMPLOYEE")
+                        // Customer endpoints: ADMIN, EMPLOYEE for most, CUSTOMER for some, permitAll for create
+                        .requestMatchers("/api/bank-management-system/customer/create-customer").permitAll()
+                        .requestMatchers("/api/bank-management-system/customer/update-customer/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/bank-management-system/customer/account/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/bank-management-system/customer/**").hasAnyRole("ADMIN", "EMPLOYEE")
                         // Any other endpoint must be authenticated
                         .anyRequest().authenticated()
                 )
